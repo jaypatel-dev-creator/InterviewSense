@@ -1,1 +1,92 @@
-  
+from domains.topics import Difficulty, DIFFICULTY_INSTRUCTIONS
+
+
+def build_evaluator_router_prompt(
+    domain: str,
+    difficulty: str,
+    question_text: str,
+    answer_transcript: str,
+    topics_covered: list[str],
+    current_question_number: int,
+    question_count: int,
+    jd_skills: list[str],
+) -> str:
+    difficulty_instruction = DIFFICULTY_INSTRUCTIONS.get(
+        difficulty, DIFFICULTY_INSTRUCTIONS[Difficulty.MEDIUM]
+    )
+
+    jd_context = ""
+    if jd_skills:
+        jd_context = f"""
+The candidate is preparing for a specific role. Target these skills from the job description:
+{", ".join(jd_skills)}
+Prioritize questions that test these skills when selecting new topics.
+"""
+
+    topics_str = ", ".join(topics_covered) if topics_covered else "none yet"
+    is_last_question = current_question_number >= question_count
+
+    return f"""You are a strict but fair technical interviewer conducting a {domain.replace("_", " ").title()} interview.
+
+DIFFICULTY LEVEL: {difficulty.upper()}
+{difficulty_instruction}
+
+CURRENT QUESTION ({current_question_number}/{question_count}):
+{question_text}
+
+CANDIDATE'S ANSWER:
+{answer_transcript}
+
+TOPICS COVERED SO FAR: {topics_str}
+{jd_context}
+
+YOUR TASK:
+1. Evaluate the candidate's answer objectively against the question asked.
+2. Assign a correctness score from 0.0 to 10.0.
+3. List specific concepts the candidate missed or got wrong.
+4. List what the candidate explained correctly or well.
+5. Decide the next question type:
+   - "follow_up" — candidate answered well, explore the same topic deeper
+   - "drill_down" — candidate was vague or partially correct, probe further
+   - "reframe" — candidate completely misunderstood, approach the concept differently
+   - "new_topic" — candidate answered well enough, move to a new topic
+   - "wrap_up" — this is the last question, generate a closing question
+6. Generate the exact next question text.
+7. Decide difficulty adjustment for the next question.
+
+{"IMPORTANT: This is the last question. Use next_question_type = 'wrap_up' and generate a final reflective question." if is_last_question else ""}
+
+Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.
+"""
+
+
+def build_first_question_prompt(
+    domain: str,
+    difficulty: str,
+    seed_topics: list[str],
+    jd_skills: list[str],
+) -> str:
+    jd_context = ""
+    if jd_skills:
+        jd_context = f"""
+The candidate has provided a job description. Start with a question targeting one of these skills:
+{", ".join(jd_skills[:5])}
+"""
+
+    topics_str = "\n".join(f"- {t}" for t in seed_topics)
+
+    return f"""You are a technical interviewer starting a {domain.replace("_", " ").title()} interview.
+
+DIFFICULTY: {difficulty.upper()}
+AVAILABLE TOPICS:
+{topics_str}
+{jd_context}
+
+Generate the first interview question. It should:
+- Be clear and specific
+- Match the difficulty level
+- Target one of the available topics (or a JD skill if provided)
+- Sound natural, like a real interviewer asking it
+
+Respond with ONLY the question text. No labels, no preamble.
+"""
