@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # Google Gemini
     google_api_key: str
-
+    groq_api_key: str
     # LangSmith
     langchain_tracing_v2: str = "true"
     langchain_endpoint: str = "https://api.smith.langchain.com"
@@ -22,10 +22,6 @@ class Settings(BaseSettings):
     # Database
     sqlite_db_path: str = "./data/sessions/interviewsense.db"
 
-    # Audio — faster-whisper
-    whisper_model_size: str = "base"
-    whisper_compute_type: str = "int8"
-    whisper_device: str = "cpu"
 
     model_config = SettingsConfigDict(
         env_file=".env",
