@@ -1,5 +1,5 @@
 from agents.state import SessionState
-from agents.orchestrator import get_llm
+from agents.llm import get_llm
 from prompts.report_generator import build_report_prompt
 from core.logging import get_logger
 from core.exceptions import AgentException

@@ -1,5 +1,5 @@
 from agents.state import SessionState
-from agents.orchestrator import get_llm
+from agents.llm import get_llm
 from schemas.evaluator_output import EvaluatorRouterOutput
 from prompts.evaluator_router import build_evaluator_router_prompt
 from domains.topics import SEED_TOPICS
