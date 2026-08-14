@@ -45,3 +45,7 @@ logs/
 *.pkl
 *.pt
 *.bin
+
+# Vite
+frontend/.vite/
+frontend/dist/
