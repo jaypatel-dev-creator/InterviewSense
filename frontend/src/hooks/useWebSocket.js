@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react'
 import { InterviewWebSocket, buildInterviewWSUrl } from '../services/websocket'
 import { useSessionStore } from '../store/sessionStore'
 import { useUIStore } from '../store/uiStore'
+import { speakText } from '../services/tts'
 
 export function useWebSocket() {
   const wsRef = useRef(null)
@@ -23,6 +24,7 @@ export function useWebSocket() {
             setQuestion(data.question, data.question_number, data.question_count)
             setAISpeaking(true)
             setProcessing(false)
+            speakText(data.question).then(() => setAISpeaking(false))
             break
 
           case 'transcript_update':

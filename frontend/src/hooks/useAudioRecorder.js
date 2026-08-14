@@ -13,6 +13,7 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const silenceTimerRef = useRef(null)
   const audioBufferRef = useRef([])
   const animFrameRef = useRef(null)
+  const stopRef = useRef(null)
 
   const { setRecording, setError } = useUIStore()
 
@@ -51,6 +52,33 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     onAudioChunk?.(merged.buffer)
   }, [onAudioChunk])
 
+  const stop = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+    flushBuffer()
+
+    processorRef.current?.disconnect()
+    analyserRef.current?.disconnect()
+    audioContextRef.current?.close()
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+
+    processorRef.current = null
+    analyserRef.current = null
+    audioContextRef.current = null
+    streamRef.current = null
+    audioBufferRef.current = []
+
+    cancelAnimationFrame(animFrameRef.current)
+    setRecording(false)
+  }, [flushBuffer, setRecording])
+
+  // Keep stopRef current without adding stop to cleanup deps
+  useEffect(() => {
+    stopRef.current = stop
+  }, [stop])
+
   const start = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -63,13 +91,11 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
 
       const source = ctx.createMediaStreamSource(stream)
 
-      // Analyser for waveform volume
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 256
       analyserRef.current = analyser
       source.connect(analyser)
 
-      // Processor for audio capture
       const processor = ctx.createScriptProcessor(4096, 1, 1)
       processorRef.current = processor
       source.connect(processor)
@@ -80,7 +106,6 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
         const chunk = new Float32Array(input)
         audioBufferRef.current.push(chunk)
 
-        // Silence detection
         const vol = Math.max(...chunk.map(Math.abs))
         if (vol < SILENCE_THRESHOLD) {
           if (!silenceTimerRef.current) {
@@ -105,31 +130,10 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     }
   }, [flushBuffer, setRecording, setError, startVolumeMonitor])
 
-  const stop = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current)
-      silenceTimerRef.current = null
-    }
-    flushBuffer()
-
-    processorRef.current?.disconnect()
-    analyserRef.current?.disconnect()
-    audioContextRef.current?.close()
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-
-    processorRef.current = null
-    analyserRef.current = null
-    audioContextRef.current = null
-    streamRef.current = null
-    audioBufferRef.current = []
-
-    cancelAnimationFrame(animFrameRef.current)
-    setRecording(false)
-  }, [flushBuffer, setRecording])
-
+  // Cleanup on unmount — uses ref to avoid infinite loop
   useEffect(() => {
-    return () => stop()
-  }, [stop])
+    return () => stopRef.current?.()
+  }, [])
 
   return { start, stop }
 }
