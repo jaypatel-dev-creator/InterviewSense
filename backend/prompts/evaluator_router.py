@@ -1,3 +1,4 @@
+import random
 from domains.topics import Difficulty, DIFFICULTY_INSTRUCTIONS
 
 
@@ -69,12 +70,15 @@ The candidate has provided a job description. Start with a question targeting on
 {", ".join(jd_skills[:5])}
 """
 
-    topics_str = "\n".join(f"- {t}" for t in seed_topics)
+    # Shuffle so the LLM doesn't always anchor on the first topic
+    shuffled_topics = seed_topics.copy()
+    random.shuffle(shuffled_topics)
+    topics_str = "\n".join(f"- {t}" for t in shuffled_topics)
 
     return f"""You are a technical interviewer starting a {domain.replace("_", " ").title()} interview.
 
 DIFFICULTY: {difficulty.upper()}
-AVAILABLE TOPICS:
+AVAILABLE TOPICS (pick one at random — do not always pick the first):
 {topics_str}
 {jd_context}
 
@@ -83,6 +87,7 @@ Generate the first interview question. It should:
 - Match the difficulty level
 - Target one of the available topics (or a JD skill if provided)
 - Sound natural, like a real interviewer asking it
+- Do NOT ask "tell me about your experience with X" — ask a specific technical question
 
 Respond with ONLY the question text. No labels, no preamble.
 """

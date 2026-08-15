@@ -79,14 +79,11 @@ async def handle_interview_websocket(
     try:
         graph = build_graph()
 
-        # Extract JD skills if provided
         jd_skills = await extract_jd_skills(jd_text or "")
         logger.info(f"JD skills extracted: {jd_skills}")
 
-        # Generate first question
         first_question = await generate_first_question(domain, difficulty, jd_skills)
 
-        # Initialize session state
         state: SessionState = {
             "session_id": session_id,
             "candidate_name": candidate_name,
@@ -102,7 +99,6 @@ async def handle_interview_websocket(
             "interview_complete": False,
         }
 
-        # Send first question to frontend
         await websocket.send_json({
             "type": "question",
             "question": first_question,
@@ -119,6 +115,8 @@ async def handle_interview_websocket(
                 data = json.loads(message["text"])
 
                 if data.get("type") == "text_answer":
+                    if state.get("interview_complete"):
+                        continue
                     answer_text = data.get("text", "")
                     await _process_answer(
                         websocket=websocket,
@@ -149,6 +147,13 @@ async def handle_interview_websocket(
 
             # --- Audio chunk ---
             elif "bytes" in message:
+                # Guard — don't process audio after interview is complete.
+                # Silence detection can fire one extra time after the last
+                # answer, sending a phantom chunk that creates turn 6 on a
+                # 5-question session.
+                if state.get("interview_complete"):
+                    continue
+
                 raw_bytes = message["bytes"]
                 audio_chunk = np.frombuffer(raw_bytes, dtype=np.float32)
 
@@ -204,20 +209,25 @@ async def _process_answer(
         "difficulty_adjustment": None,
         "timestamp": utcnow_iso(),
     }
-    state["turns"].append(new_turn)
+
+    # Don't append to state["turns"] before graph.ainvoke — the graph
+    # manages turns via the _replace_turns reducer. Appending here then
+    # letting the graph also return turns causes double-accumulation and
+    # drifts the question counter. Pass the new turn via state directly.
+    state["turns"] = state["turns"] + [new_turn]
 
     logger.info(f"Running agent graph for turn {len(state['turns'])}")
     result = await graph.ainvoke(state)
     state.update(result)
     logger.info("Agent graph complete.")
 
+    # Use the evaluated turn from state for DB insert
+    evaluated_turn = state["turns"][-1]
+
     async with await get_db() as db:
         await insert_turn(db, {
-            **new_turn,
+            **evaluated_turn,
             "session_id": session_id,
-            "correctness_score": state["turns"][-1].get("correctness_score"),
-            "speech_metrics": state["turns"][-1].get("speech_metrics", {}),
-            "next_question_type": state["turns"][-1].get("next_question_type"),
         })
 
     if state.get("interview_complete"):
@@ -229,9 +239,9 @@ async def _process_answer(
             "question_number": state["current_question_number"],
             "question_count": state["question_count"],
             "evaluation": {
-                "correctness_score": state["turns"][-1].get("correctness_score"),
-                "strengths": state["turns"][-1].get("strengths", []),
-                "missing_concepts": state["turns"][-1].get("missing_concepts", []),
+                "correctness_score": evaluated_turn.get("correctness_score"),
+                "strengths": evaluated_turn.get("strengths", []),
+                "missing_concepts": evaluated_turn.get("missing_concepts", []),
             },
         })
 

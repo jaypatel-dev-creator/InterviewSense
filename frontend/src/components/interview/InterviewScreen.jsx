@@ -132,7 +132,7 @@ export default function InterviewScreen() {
             <div className="flex flex-col items-center gap-4">
               <button
                 onClick={toggleRecording}
-                disabled={isProcessing}
+                disabled={isProcessing || isAISpeaking}
                 className="w-16 h-16 rounded-full flex items-center justify-center transition-all"
                 style={{
                   backgroundColor: isRecording
@@ -142,6 +142,8 @@ export default function InterviewScreen() {
                   boxShadow: isRecording
                     ? '0 0 24px rgba(239,68,68,0.3)'
                     : 'none',
+                  opacity: isProcessing || isAISpeaking ? 0.4 : 1,
+                  cursor: isProcessing || isAISpeaking ? 'not-allowed' : 'pointer',
                 }}
               >
                 {isRecording ? (
@@ -157,7 +159,11 @@ export default function InterviewScreen() {
                 )}
               </button>
               <span className="text-xs" style={{ color: '#64748b' }}>
-                {isRecording ? 'Recording — click to stop' : 'Click to speak your answer'}
+                {isAISpeaking
+                  ? 'InterviewSense is speaking...'
+                  : isRecording
+                  ? 'Recording — click to stop'
+                  : 'Click to speak your answer'}
               </span>
               <button
                 onClick={() => setTextFallback(true)}

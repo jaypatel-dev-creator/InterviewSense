@@ -15,7 +15,13 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const animFrameRef = useRef(null)
   const stopRef = useRef(null)
 
-  const { setRecording, setError } = useUIStore()
+  const { setRecording, setError, isAISpeaking } = useUIStore()
+
+  // Keep a ref to isAISpeaking so onaudioprocess closure always sees current value
+  const isAISpeakingRef = useRef(isAISpeaking)
+  useEffect(() => {
+    isAISpeakingRef.current = isAISpeaking
+  }, [isAISpeaking])
 
   const getVolume = useCallback(() => {
     if (!analyserRef.current) return 0
@@ -118,6 +124,18 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
       processor.connect(ctx.destination)
 
       processor.onaudioprocess = (e) => {
+        // AI is speaking — drop all incoming audio and clear any pending
+        // silence timer. Prevents TTS speaker bleed from being sent as
+        // the candidate's answer and auto-advancing through all questions.
+        if (isAISpeakingRef.current) {
+          audioBufferRef.current = []
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current)
+            silenceTimerRef.current = null
+          }
+          return
+        }
+
         const input = e.inputBuffer.getChannelData(0)
         const chunk = new Float32Array(input)
         audioBufferRef.current.push(chunk)

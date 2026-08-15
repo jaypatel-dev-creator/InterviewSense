@@ -46,9 +46,12 @@ export default function ReportScreen() {
             Start New Interview
           </button>
         </div>
+
+        {/* turns.length is always 0 — frontend never populates turns from backend.
+            Use sessionConfig.questionCount which is set at session start. */}
         <p style={{ color: '#64748b' }}>
           {sessionConfig?.domain?.replace('_', ' ')} · {sessionConfig?.difficulty} ·{' '}
-          {turns.length} questions
+          {sessionConfig?.questionCount ?? report.weak_topics?.length ?? '—'} questions
         </p>
       </div>
 
@@ -86,6 +89,7 @@ export default function ReportScreen() {
               Full agent execution trace for this session
             </p>
           </div>
+
           <a
             href={report.langsmith_trace_url}
             target="_blank"
@@ -101,7 +105,6 @@ export default function ReportScreen() {
           </a>
         </div>
       )}
-
     </div>
   )
 }
