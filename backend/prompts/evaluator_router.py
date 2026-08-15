@@ -24,7 +24,6 @@ Prioritize questions that test these skills when selecting new topics.
 """
 
     topics_str = ", ".join(topics_covered) if topics_covered else "none yet"
-    is_last_question = current_question_number >= question_count
 
     return f"""You are a strict but fair technical interviewer conducting a {domain.replace("_", " ").title()} interview.
 
@@ -50,11 +49,8 @@ YOUR TASK:
    - "drill_down" — candidate was vague or partially correct, probe further
    - "reframe" — candidate completely misunderstood, approach the concept differently
    - "new_topic" — candidate answered well enough, move to a new topic
-   - "wrap_up" — this is the last question, generate a closing question
 6. Generate the exact next question text.
 7. Decide difficulty adjustment for the next question.
-
-{"IMPORTANT: This is the last question. Use next_question_type = 'wrap_up' and generate a final reflective question." if is_last_question else ""}
 
 Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.
 """

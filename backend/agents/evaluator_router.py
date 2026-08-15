@@ -62,13 +62,14 @@ async def evaluator_router_node(state: SessionState) -> dict:
 
     updated_turns = turns[:-1] + [updated_turn]
 
-    interview_complete = (
-        state["current_question_number"] >= state["question_count"]
-    )
+    # Increment first, then check — prevents off-by-one early termination.
+    # Cast to int guards against question_count arriving as a string from query params.
+    next_question_number = state["current_question_number"] + 1
+    interview_complete = next_question_number > int(state["question_count"])
 
     return {
         "turns": updated_turns,
         "current_question": result.next_question_text,
-        "current_question_number": state["current_question_number"] + 1,
+        "current_question_number": next_question_number,
         "interview_complete": interview_complete,
     }

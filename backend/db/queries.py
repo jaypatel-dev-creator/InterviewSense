@@ -113,9 +113,12 @@ async def get_turns_by_session(
 # --- Reports ---
 
 async def insert_report(db: aiosqlite.Connection, report: dict) -> None:
+    # INSERT OR IGNORE — _finalize_session can be called twice in edge cases
+    # (once from _process_answer when interview_complete, once directly).
+    # Second call silently skips instead of crashing on UNIQUE constraint.
     await db.execute(
         """
-        INSERT INTO reports (
+        INSERT OR IGNORE INTO reports (
             report_id, session_id, technical_score, communication_score,
             speech_score, composite_score, weak_topics,
             improvement_plan_text, langsmith_trace_url, created_at
