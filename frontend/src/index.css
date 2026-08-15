@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0f;
-  --color-surface: #111118;
-  --color-border: #1e1e2e;
+  --color-background: #0a0a0a;
+  --color-surface: #111111;
+  --color-border: #1a1a1a;
   --color-accent: #3b82f6;
   --color-accent-hover: #2563eb;
   --color-text-primary: #f1f5f9;
-  --color-text-muted: #64748b;
+  --color-text-muted: #555555;
   --font-family-sans: 'Inter', system-ui, sans-serif;
   --font-family-mono: 'JetBrains Mono', monospace;
 }
@@ -20,37 +20,44 @@
 
 html, body, #root {
   height: 100%;
-  background-color: #0a0a0f;
+  background-color: #0a0a0a;
   color: #f1f5f9;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0f;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e1e2e;
+  background: #1a1a1a;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #2a2a2a;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.2);
   color: #f1f5f9;
 }
 
 /* Focus */
 :focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 1px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* Inputs */
+input::placeholder,
+textarea::placeholder {
+  color: #2a2a2a;
 }
 
 /* Reduced motion */
