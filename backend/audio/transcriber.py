@@ -33,11 +33,13 @@ def get_groq_client() -> Groq:
 
 def _numpy_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
     """
-    Converts float32 numpy array to WAV bytes for Groq API.
-    Groq accepts WAV — lowest latency format per their docs.
+    Converts float32 numpy array to PCM_16 WAV bytes for Groq API.
+    Groq Whisper expects standard int16 PCM WAV — float subtype causes
+    silent empty transcripts. Clip → scale → cast before writing.
     """
     buffer = io.BytesIO()
-    sf.write(buffer, audio, sample_rate, format="WAV", subtype="FLOAT")
+    audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
+    sf.write(buffer, audio_int16, sample_rate, format="WAV", subtype="PCM_16")
     buffer.seek(0)
     return buffer.read()
 

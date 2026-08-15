@@ -17,6 +17,15 @@ class Turn(TypedDict):
     timestamp: str
 
 
+def _replace_turns(existing: list, updated: list) -> list:
+    """
+    Replace, don't append. The evaluator_router returns the full updated
+    turns list — if LangGraph merges via x + y, turns double-accumulate
+    by Q2 and corrupt the evaluation context from that point onward.
+    """
+    return updated if updated else existing
+
+
 class SessionState(TypedDict):
     # Session identity
     session_id: str
@@ -30,7 +39,7 @@ class SessionState(TypedDict):
     # Interview progress
     current_question: str
     current_question_number: int
-    turns: Annotated[list[Turn], lambda x, y: x + y]
+    turns: Annotated[list[Turn], _replace_turns]
 
     # Agent messages — LangGraph managed
     messages: Annotated[list[BaseMessage], add_messages]

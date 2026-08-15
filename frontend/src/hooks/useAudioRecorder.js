@@ -40,6 +40,7 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
 
   const flushBuffer = useCallback(() => {
     if (audioBufferRef.current.length === 0) return
+
     const merged = new Float32Array(
       audioBufferRef.current.reduce((acc, chunk) => acc + chunk.length, 0)
     )
@@ -49,7 +50,22 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
       offset += chunk.length
     }
     audioBufferRef.current = []
-    onAudioChunk?.(merged.buffer)
+
+    // Browsers ignore the sampleRate hint on AudioContext and run at hardware
+    // rate (typically 44100 or 48000Hz). Resample down to 16000Hz before
+    // sending — Groq Whisper expects 16kHz audio. Wrong rate = pitch-shifted
+    // garbage in, empty transcript out.
+    const actualRate = audioContextRef.current?.sampleRate || 44100
+    if (actualRate !== SAMPLE_RATE) {
+      const ratio = SAMPLE_RATE / actualRate
+      const resampled = new Float32Array(Math.round(merged.length * ratio))
+      for (let i = 0; i < resampled.length; i++) {
+        resampled[i] = merged[Math.round(i / ratio)] ?? 0
+      }
+      onAudioChunk?.(resampled.buffer)
+    } else {
+      onAudioChunk?.(merged.buffer)
+    }
   }, [onAudioChunk])
 
   const stop = useCallback(() => {

@@ -24,11 +24,24 @@ export async function speakText(text) {
     const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' })
     const url = URL.createObjectURL(blob)
     currentAudio = new Audio(url)
-    currentAudio.play()
-    currentAudio.onended = () => {
-      URL.revokeObjectURL(url)
-      currentAudio = null
-    }
+
+    // Return a Promise that resolves only when audio finishes playing.
+    // Without this, speakText().then(() => setAISpeaking(false)) fires
+    // immediately after play() — indicator disappears mid-sentence.
+    return new Promise((resolve) => {
+      currentAudio.onended = () => {
+        URL.revokeObjectURL(url)
+        currentAudio = null
+        resolve()
+      }
+      currentAudio.onerror = () => {
+        // Don't hang forever if audio fails to load
+        URL.revokeObjectURL(url)
+        currentAudio = null
+        resolve()
+      }
+      currentAudio.play()
+    })
   } catch (err) {
     console.error('TTS error:', err)
   }
