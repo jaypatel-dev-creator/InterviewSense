@@ -81,12 +81,21 @@ def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
     words = []
     if hasattr(response, "words") and response.words:
         for w in response.words:
-            words.append({
-                "word": w.word.strip(),
-                "start": w.start,
-                "end": w.end,
-                "probability": 1.0,  # Groq verbose_json doesn't expose per-word probability
-            })
+            # Groq verbose_json returns words as plain dicts, not objects
+            if isinstance(w, dict):
+                words.append({
+                    "word": w["word"].strip(),
+                    "start": w["start"],
+                    "end": w["end"],
+                    "probability": 1.0,
+                })
+            else:
+                words.append({
+                    "word": w.word.strip(),
+                    "start": w.start,
+                    "end": w.end,
+                    "probability": 1.0,
+                })
 
     language = response.language if hasattr(response, "language") else "en"
 
