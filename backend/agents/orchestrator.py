@@ -20,7 +20,7 @@ def compile_graph() -> None:
     settings = get_settings()
 
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
+        model="gemini-3.1-flash-lite",
         google_api_key=settings.google_api_key,
         temperature=0.7,
     )

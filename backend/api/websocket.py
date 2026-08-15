@@ -6,15 +6,13 @@ from fastapi import WebSocket, WebSocketDisconnect
 from agents.orchestrator import build_graph
 from agents.state import SessionState
 from audio.processor import process_audio_chunk
-from audio.vad import detect_speech_chunks
 from db.database import get_db
 from db.queries import insert_turn, update_session_end, insert_report
 from prompts.evaluator_router import build_first_question_prompt
 from prompts.jd_extractor import build_jd_extractor_prompt
-from domains.topics import SEED_TOPICS, Domain
-from agents.orchestrator import get_llm
+from domains.topics import SEED_TOPICS
+from agents.llm import get_llm
 from core.logging import get_logger
-from core.exceptions import AgentException
 
 logger = get_logger(__name__)
 
@@ -31,7 +29,6 @@ async def extract_jd_skills(jd_text: str) -> list[str]:
     try:
         response = await llm.ainvoke(prompt)
         content = response.content.strip()
-        # Strip markdown fences if present
         if content.startswith("```"):
             content = content.split("```")[1]
             if content.startswith("json"):
@@ -39,7 +36,7 @@ async def extract_jd_skills(jd_text: str) -> list[str]:
         skills = json.loads(content.strip())
         return skills if isinstance(skills, list) else []
     except Exception as e:
-        logger.warning(f"JD skill extraction failed: {e}")
+        logger.warning(f"JD skill extraction failed: {e}", exc_info=True)
         return []
 
 
@@ -57,10 +54,13 @@ async def generate_first_question(
         jd_skills=jd_skills,
     )
     try:
+        logger.info(f"Generating first question — domain: {domain}, difficulty: {difficulty}")
         response = await llm.ainvoke(prompt)
-        return response.content.strip()
+        question = response.content.strip()
+        logger.info(f"First question generated: {question[:80]}")
+        return question
     except Exception as e:
-        logger.warning(f"First question generation failed: {e}")
+        logger.error(f"First question generation failed: {e}", exc_info=True)
         return f"Tell me about your experience with {domain.replace('_', ' ')}."
 
 
@@ -76,39 +76,41 @@ async def handle_interview_websocket(
     await websocket.accept()
     logger.info(f"WebSocket connected — session: {session_id}")
 
-    graph = build_graph()
-
-    # Extract JD skills if provided
-    jd_skills = await extract_jd_skills(jd_text or "")
-
-    # Generate first question
-    first_question = await generate_first_question(domain, difficulty, jd_skills)
-
-    # Initialize session state
-    state: SessionState = {
-        "session_id": session_id,
-        "candidate_name": candidate_name,
-        "domain": domain,
-        "difficulty": difficulty,
-        "question_count": question_count,
-        "jd_text": jd_text or "",
-        "jd_skills": jd_skills,
-        "current_question": first_question,
-        "current_question_number": 1,
-        "turns": [],
-        "messages": [],
-        "interview_complete": False,
-    }
-
-    # Send first question to frontend
-    await websocket.send_json({
-        "type": "question",
-        "question": first_question,
-        "question_number": 1,
-        "question_count": question_count,
-    })
-
     try:
+        graph = build_graph()
+
+        # Extract JD skills if provided
+        jd_skills = await extract_jd_skills(jd_text or "")
+        logger.info(f"JD skills extracted: {jd_skills}")
+
+        # Generate first question
+        first_question = await generate_first_question(domain, difficulty, jd_skills)
+
+        # Initialize session state
+        state: SessionState = {
+            "session_id": session_id,
+            "candidate_name": candidate_name,
+            "domain": domain,
+            "difficulty": difficulty,
+            "question_count": question_count,
+            "jd_text": jd_text or "",
+            "jd_skills": jd_skills,
+            "current_question": first_question,
+            "current_question_number": 1,
+            "turns": [],
+            "messages": [],
+            "interview_complete": False,
+        }
+
+        # Send first question to frontend
+        await websocket.send_json({
+            "type": "question",
+            "question": first_question,
+            "question_number": 1,
+            "question_count": question_count,
+        })
+        logger.info("First question sent to frontend.")
+
         while True:
             message = await websocket.receive()
 
@@ -139,17 +141,21 @@ async def handle_interview_websocket(
                         "question_count": question_count,
                     })
 
+                elif data.get("type") == "skip_question":
+                    state["current_question_number"] += 1
+                    if state["current_question_number"] > question_count:
+                        await _finalize_session(websocket, state, session_id)
+                        break
+
             # --- Audio chunk ---
             elif "bytes" in message:
                 raw_bytes = message["bytes"]
                 audio_chunk = np.frombuffer(raw_bytes, dtype=np.float32)
 
-                # Process audio — parallel Whisper + librosa
                 result = await process_audio_chunk(audio_chunk)
                 transcript = result["transcript"]
                 speech_metrics = result["speech_metrics"]
 
-                # Send live transcript update
                 await websocket.send_json({
                     "type": "transcript_update",
                     "text": transcript["text"],
@@ -170,7 +176,10 @@ async def handle_interview_websocket(
         logger.info(f"WebSocket disconnected — session: {session_id}")
     except Exception as e:
         logger.error(f"WebSocket error — session {session_id}: {e}", exc_info=True)
-        await websocket.send_json({"type": "error", "message": str(e)})
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
 
 
 async def _process_answer(
@@ -183,7 +192,6 @@ async def _process_answer(
 ):
     turn_id = str(uuid.uuid4())
 
-    # Add turn to state
     new_turn = {
         "turn_id": turn_id,
         "question_text": state["current_question"],
@@ -198,11 +206,11 @@ async def _process_answer(
     }
     state["turns"].append(new_turn)
 
-    # Run agent graph
+    logger.info(f"Running agent graph for turn {len(state['turns'])}")
     result = await graph.ainvoke(state)
     state.update(result)
+    logger.info("Agent graph complete.")
 
-    # Persist turn to DB
     async with await get_db() as db:
         await insert_turn(db, {
             **new_turn,
@@ -235,11 +243,9 @@ async def _finalize_session(
 ):
     logger.info(f"Finalizing session: {session_id}")
 
-    # Run report generator
     result = await build_graph().ainvoke({**state, "interview_complete": True})
     improvement_plan = result.get("improvement_plan_text", "")
 
-    # Compute scores
     turns = state["turns"]
     technical_scores = [
         t.get("correctness_score", 0.0)

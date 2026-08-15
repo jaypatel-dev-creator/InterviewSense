@@ -1,6 +1,8 @@
 import uuid
+import httpx
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
+from fastapi.responses import Response
 from schemas.session import SessionCreateRequest, SessionResponse
 from schemas.report import ReportResponse
 from schemas.turn import TurnResponse, SpeechMetrics
@@ -13,6 +15,7 @@ from db.queries import (
     get_report_by_session,
 )
 from core.exceptions import SessionNotFoundException, ReportNotFoundException
+from core.config import get_settings
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -91,6 +94,29 @@ async def get_report(session_id: str):
     return ReportResponse(**report)
 
 
+# --- TTS Proxy ---
+
+@router.post("/tts")
+async def text_to_speech(payload: dict):
+    from elevenlabs.client import AsyncElevenLabs
+    settings = get_settings()
+
+    client = AsyncElevenLabs(api_key=settings.elevenlabs_api_key)
+
+    audio_bytes = b""
+    async for chunk in client.text_to_speech.convert(
+        text=payload.get("text", ""),
+        voice_id=settings.elevenlabs_voice_id,
+        model_id="eleven_flash_v2_5",
+        output_format="mp3_44100_128",
+    ):
+        audio_bytes += chunk
+
+    return Response(
+        content=audio_bytes,
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": "inline"},
+    )
 # --- Health ---
 
 @router.get("/health")
