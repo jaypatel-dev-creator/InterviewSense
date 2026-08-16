@@ -25,17 +25,17 @@ export async function speakText(text) {
     const url = URL.createObjectURL(blob)
     currentAudio = new Audio(url)
 
-    // Return a Promise that resolves only when audio finishes playing.
-    // Without this, speakText().then(() => setAISpeaking(false)) fires
-    // immediately after play() — indicator disappears mid-sentence.
     return new Promise((resolve) => {
       currentAudio.onended = () => {
         URL.revokeObjectURL(url)
         currentAudio = null
-        resolve()
+        // 600ms cooldown after TTS ends before mic is re-enabled.
+        // Prevents speaker bleed — the gap between audio.onended and
+        // isAISpeakingRef updating in useAudioRecorder causes a window
+        // where mic captures TTS tail audio and sends it as the answer.
+        setTimeout(resolve, 600)
       }
       currentAudio.onerror = () => {
-        // Don't hang forever if audio fails to load
         URL.revokeObjectURL(url)
         currentAudio = null
         resolve()
