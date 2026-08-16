@@ -5,6 +5,7 @@ const SAMPLE_RATE = 16000
 const SILENCE_THRESHOLD = 0.02
 const SILENCE_DURATION_MS = 3000
 const MIN_AUDIO_SECONDS = 2.0
+const MIN_ENERGY = 0.005  // ambient noise is ~0.001, real speech is ~0.02+
 
 export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const audioContextRef = useRef(null)
@@ -15,6 +16,7 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const audioBufferRef = useRef([])
   const animFrameRef = useRef(null)
   const stopRef = useRef(null)
+  const peakEnergyRef = useRef(0)  // track peak energy seen in current recording
 
   const { setRecording, setError, isAISpeaking } = useUIStore()
 
@@ -58,10 +60,22 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     audioBufferRef.current = []
 
     const actualRate = audioContextRef.current?.sampleRate || 44100
+
+    // Duration guard — don't send clips under 2 seconds
     const durationSeconds = merged.length / actualRate
     if (durationSeconds < MIN_AUDIO_SECONDS) {
+      peakEnergyRef.current = 0
       return
     }
+
+    // Energy guard — don't send if peak energy never exceeded speech threshold.
+    // Ambient noise peaks at ~0.001-0.003. Real speech peaks at 0.01+.
+    // This kills the "3 seconds of room noise" false trigger entirely.
+    if (peakEnergyRef.current < MIN_ENERGY) {
+      peakEnergyRef.current = 0
+      return
+    }
+    peakEnergyRef.current = 0
 
     if (actualRate !== SAMPLE_RATE) {
       const ratio = SAMPLE_RATE / actualRate
@@ -89,21 +103,19 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     audioContextRef.current = null
     streamRef.current = null
     audioBufferRef.current = []
+    peakEnergyRef.current = 0
     cancelAnimationFrame(animFrameRef.current)
     setRecording(false)
   }, [setRecording])
 
-  // stop — flushes buffer and sends audio (used when user clicks stop mid-answer)
   const stop = useCallback(() => {
     flushBuffer()
     _teardown()
   }, [flushBuffer, _teardown])
 
-  // stopSilently — tears down mic WITHOUT sending audio.
-  // Called between questions so the mic resets and user must click again.
-  // Prevents VAD from firing on inter-question silence.
   const stopSilently = useCallback(() => {
     audioBufferRef.current = []
+    peakEnergyRef.current = 0
     _teardown()
   }, [_teardown])
 
@@ -136,6 +148,7 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
       processor.onaudioprocess = (e) => {
         if (isAISpeakingRef.current) {
           audioBufferRef.current = []
+          peakEnergyRef.current = 0
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current)
             silenceTimerRef.current = null
@@ -148,6 +161,12 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
         audioBufferRef.current.push(chunk)
 
         const vol = Math.max(...chunk.map(Math.abs))
+
+        // Track peak energy seen in this recording session
+        if (vol > peakEnergyRef.current) {
+          peakEnergyRef.current = vol
+        }
+
         if (vol < SILENCE_THRESHOLD) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
