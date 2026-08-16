@@ -18,8 +18,6 @@ def setup_logging(app_env: str = "development") -> None:
         "httpcore",
         "aiosqlite",
         "urllib3",
-        "langsmith",
-        "langsmith.client",
         "opentelemetry",
         "google.auth",
         "google.auth.transport",

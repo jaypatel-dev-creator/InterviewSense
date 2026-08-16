@@ -6,12 +6,7 @@ class Settings(BaseSettings):
     # Google Gemini
     google_api_key: str
     groq_api_key: str
-    # LangSmith
-    langchain_tracing_v2: str = "true"
-    langchain_endpoint: str = "https://api.smith.langchain.com"
-    langchain_api_key: str
-    langchain_project: str = "interviewsense"
-
+ 
     # ElevenLabs
     elevenlabs_api_key: str
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel — clean, neutral, professional

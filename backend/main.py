@@ -10,7 +10,7 @@ from core.exceptions import (
     interviewsense_exception_handler,
     generic_exception_handler,
 )
-from core.langsmith import setup_langsmith
+
 from api.routes import router
 from api.websocket import handle_interview_websocket
 from db.database import init_db_path, get_db
@@ -29,8 +29,7 @@ async def lifespan(app: FastAPI):
     setup_logging(settings.app_env)
     logger.info("Starting InterviewSense...")
 
-    # LangSmith
-    setup_langsmith(settings)
+    
 
     # Database
     init_db_path()
