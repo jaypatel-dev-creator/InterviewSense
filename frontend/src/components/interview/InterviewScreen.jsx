@@ -24,10 +24,20 @@ export default function InterviewScreen() {
   const [textFallback, setTextFallback] = useState(false)
   const [textInput, setTextInput] = useState('')
 
-  const { start, stop } = useAudioRecorder(
+  const { start, stop, stopSilently } = useAudioRecorder(
     (buffer) => sendAudio(buffer),
     (vol) => setVolume(vol),
   )
+
+  // When a new question arrives, stop mic silently — user must click again.
+  // Prevents VAD firing on inter-question silence and auto-submitting nothing.
+  const prevQuestionNumberRef = useRef(currentQuestionNumber)
+  useEffect(() => {
+    if (currentQuestionNumber !== prevQuestionNumberRef.current) {
+      prevQuestionNumberRef.current = currentQuestionNumber
+      stopSilently()
+    }
+  }, [currentQuestionNumber, stopSilently])
 
   const toggleRecording = () => {
     if (isRecording) {

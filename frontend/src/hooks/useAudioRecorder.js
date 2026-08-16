@@ -2,8 +2,9 @@ import { useRef, useCallback, useEffect } from 'react'
 import { useUIStore } from '../store/uiStore'
 
 const SAMPLE_RATE = 16000
-const SILENCE_THRESHOLD = 0.01
-const SILENCE_DURATION_MS = 1500
+const SILENCE_THRESHOLD = 0.02
+const SILENCE_DURATION_MS = 3000
+const MIN_AUDIO_SECONDS = 2.0
 
 export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const audioContextRef = useRef(null)
@@ -17,7 +18,6 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
 
   const { setRecording, setError, isAISpeaking } = useUIStore()
 
-  // Keep a ref to isAISpeaking so onaudioprocess closure always sees current value
   const isAISpeakingRef = useRef(isAISpeaking)
   useEffect(() => {
     isAISpeakingRef.current = isAISpeaking
@@ -57,11 +57,12 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     }
     audioBufferRef.current = []
 
-    // Browsers ignore the sampleRate hint on AudioContext and run at hardware
-    // rate (typically 44100 or 48000Hz). Resample down to 16000Hz before
-    // sending — Groq Whisper expects 16kHz audio. Wrong rate = pitch-shifted
-    // garbage in, empty transcript out.
     const actualRate = audioContextRef.current?.sampleRate || 44100
+    const durationSeconds = merged.length / actualRate
+    if (durationSeconds < MIN_AUDIO_SECONDS) {
+      return
+    }
+
     if (actualRate !== SAMPLE_RATE) {
       const ratio = SAMPLE_RATE / actualRate
       const resampled = new Float32Array(Math.round(merged.length * ratio))
@@ -74,29 +75,38 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     }
   }, [onAudioChunk])
 
-  const stop = useCallback(() => {
+  const _teardown = useCallback(() => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current)
       silenceTimerRef.current = null
     }
-    flushBuffer()
-
     processorRef.current?.disconnect()
     analyserRef.current?.disconnect()
     audioContextRef.current?.close()
     streamRef.current?.getTracks().forEach((t) => t.stop())
-
     processorRef.current = null
     analyserRef.current = null
     audioContextRef.current = null
     streamRef.current = null
     audioBufferRef.current = []
-
     cancelAnimationFrame(animFrameRef.current)
     setRecording(false)
-  }, [flushBuffer, setRecording])
+  }, [setRecording])
 
-  // Keep stopRef current without adding stop to cleanup deps
+  // stop — flushes buffer and sends audio (used when user clicks stop mid-answer)
+  const stop = useCallback(() => {
+    flushBuffer()
+    _teardown()
+  }, [flushBuffer, _teardown])
+
+  // stopSilently — tears down mic WITHOUT sending audio.
+  // Called between questions so the mic resets and user must click again.
+  // Prevents VAD from firing on inter-question silence.
+  const stopSilently = useCallback(() => {
+    audioBufferRef.current = []
+    _teardown()
+  }, [_teardown])
+
   useEffect(() => {
     stopRef.current = stop
   }, [stop])
@@ -124,9 +134,6 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
       processor.connect(ctx.destination)
 
       processor.onaudioprocess = (e) => {
-        // AI is speaking — drop all incoming audio and clear any pending
-        // silence timer. Prevents TTS speaker bleed from being sent as
-        // the candidate's answer and auto-advancing through all questions.
         if (isAISpeakingRef.current) {
           audioBufferRef.current = []
           if (silenceTimerRef.current) {
@@ -164,10 +171,9 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     }
   }, [flushBuffer, setRecording, setError, startVolumeMonitor])
 
-  // Cleanup on unmount — uses ref to avoid infinite loop
   useEffect(() => {
     return () => stopRef.current?.()
   }, [])
 
-  return { start, stop }
+  return { start, stop, stopSilently }
 }

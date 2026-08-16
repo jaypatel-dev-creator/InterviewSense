@@ -139,4 +139,4 @@ async def text_to_speech(payload: dict):
 
 @router.get("/health")
 async def health():
-    return {"status": "ok", "service": "InterviewSense"}t
+    return {"status": "ok", "service": "InterviewSense"}
