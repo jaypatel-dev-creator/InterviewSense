@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { listSessions } from '../../services/api'
+import { listSessions, deleteAllSessions } from '../../services/api'
 import SessionCard from './SessionCard'
 
 export default function SessionHistory({ isOpen, onClose }) {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(false)
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [clearingAll, setClearingAll] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -15,8 +17,30 @@ export default function SessionHistory({ isOpen, onClose }) {
       .finally(() => setLoading(false))
   }, [isOpen])
 
+  // Reset confirm state when sidebar closes
+  useEffect(() => {
+    if (!isOpen) setConfirmClearAll(false)
+  }, [isOpen])
+
   const handleDelete = (sessionId) => {
     setSessions((prev) => prev.filter((s) => s.session_id !== sessionId))
+  }
+
+  const handleClearAll = async () => {
+    if (!confirmClearAll) {
+      setConfirmClearAll(true)
+      return
+    }
+    setClearingAll(true)
+    try {
+      await deleteAllSessions()
+      setSessions([])
+      setConfirmClearAll(false)
+    } catch (err) {
+      console.error('Clear all failed:', err)
+    } finally {
+      setClearingAll(false)
+    }
   }
 
   return (
@@ -48,18 +72,34 @@ export default function SessionHistory({ isOpen, onClose }) {
           <h2 className="text-sm font-semibold" style={{ color: '#f1f5f9' }}>
             Session History
           </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md transition-colors"
-            style={{ color: '#64748b' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
-            onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {sessions.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                disabled={clearingAll}
+                className="text-xs px-2 py-1 rounded transition-colors"
+                style={{
+                  color: confirmClearAll ? '#fca5a5' : '#64748b',
+                  border: `1px solid ${confirmClearAll ? '#ef4444' : 'transparent'}`,
+                  opacity: clearingAll ? 0.5 : 1,
+                }}
+              >
+                {clearingAll ? 'Clearing...' : confirmClearAll ? 'Confirm clear all' : 'Clear all'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md transition-colors"
+              style={{ color: '#64748b' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
+              onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Sessions List */}

@@ -85,6 +85,20 @@ async def delete_session(db: aiosqlite.Connection, session_id: str) -> bool:
     return deleted
 
 
+async def delete_all_sessions(db: aiosqlite.Connection) -> int:
+    """
+    Deletes all sessions, turns, and reports.
+    Returns count of sessions deleted.
+    """
+    await db.execute("DELETE FROM turns")
+    await db.execute("DELETE FROM reports")
+    cursor = await db.execute("DELETE FROM sessions")
+    await db.commit()
+    count = cursor.rowcount
+    logger.debug(f"All sessions deleted: {count} removed")
+    return count
+
+
 # --- Turns ---
 
 async def insert_turn(db: aiosqlite.Connection, turn: dict) -> None:

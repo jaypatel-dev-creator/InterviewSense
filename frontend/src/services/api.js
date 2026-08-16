@@ -11,6 +11,9 @@ const api = axios.create({
 export const createSession = (payload) =>
   api.post('/api/sessions', payload).then((r) => r.data)
 
+export const deleteAllSessions = () =>
+  api.delete('/api/sessions')
+
 export const listSessions = () =>
   api.get('/api/sessions').then((r) => r.data)
 
