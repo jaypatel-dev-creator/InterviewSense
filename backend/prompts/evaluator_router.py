@@ -55,8 +55,6 @@ YOUR TASK:
 
 Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.
 """
-
-
 def build_first_question_prompt(
     domain: str,
     difficulty: str,
@@ -65,29 +63,21 @@ def build_first_question_prompt(
 ) -> str:
     jd_context = ""
     if jd_skills:
-        jd_context = f"""
-The candidate has provided a job description. Start with a question targeting one of these skills:
-{", ".join(jd_skills[:5])}
-"""
+        jd_context = f"Focus on this skill from the job description: {jd_skills[0]}\n"
 
-    # Shuffle so the LLM doesn't always anchor on the first topic
-    shuffled_topics = seed_topics.copy()
-    random.shuffle(shuffled_topics)
-    topics_str = "\n".join(f"- {t}" for t in shuffled_topics)
+    # Pick one topic in code — don't let the LLM choose
+    topics_pool = seed_topics.copy()
+    random.shuffle(topics_pool)
+    chosen_topic = topics_pool[0]
 
-    return f"""You are a technical interviewer starting a {domain.replace("_", " ").title()} interview.
+    return f"""You are a technical interviewer. Ask one interview question about: {chosen_topic}
 
-DIFFICULTY: {difficulty.upper()}
-AVAILABLE TOPICS (pick one at random — do not always pick the first):
-{topics_str}
+Domain: {domain.replace("_", " ").title()}
+Difficulty: {difficulty.upper()}
 {jd_context}
+Output format: Write the question text only. No JSON. No labels. No preamble. Just the question sentence ending with a question mark.
 
-Generate the first interview question. It should:
-- Be clear and specific
-- Match the difficulty level
-- Target one of the available topics (or a JD skill if provided)
-- Sound natural, like a real interviewer asking it
-- Do NOT ask "tell me about your experience with X" — ask a specific technical question
+Example of correct output:
+How does gradient descent optimize a neural network's weights during backpropagation?
 
-Respond with ONLY the question text. No labels, no preamble.
-"""
+Now write one question about {chosen_topic}:"""

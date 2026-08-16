@@ -68,6 +68,23 @@ async def get_session_by_id(
         return dict(zip(columns, row))
 
 
+async def delete_session(db: aiosqlite.Connection, session_id: str) -> bool:
+    """
+    Deletes a session and all associated turns and reports.
+    Returns True if a session was deleted, False if not found.
+    """
+    await db.execute("DELETE FROM turns WHERE session_id = ?", (session_id,))
+    await db.execute("DELETE FROM reports WHERE session_id = ?", (session_id,))
+    cursor = await db.execute(
+        "DELETE FROM sessions WHERE session_id = ?", (session_id,)
+    )
+    await db.commit()
+    deleted = cursor.rowcount > 0
+    if deleted:
+        logger.debug(f"Session deleted: {session_id}")
+    return deleted
+
+
 # --- Turns ---
 
 async def insert_turn(db: aiosqlite.Connection, turn: dict) -> None:
@@ -113,9 +130,6 @@ async def get_turns_by_session(
 # --- Reports ---
 
 async def insert_report(db: aiosqlite.Connection, report: dict) -> None:
-    # INSERT OR IGNORE — _finalize_session can be called twice in edge cases
-    # (once from _process_answer when interview_complete, once directly).
-    # Second call silently skips instead of crashing on UNIQUE constraint.
     await db.execute(
         """
         INSERT OR IGNORE INTO reports (

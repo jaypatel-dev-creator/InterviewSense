@@ -15,6 +15,10 @@ export default function SessionHistory({ isOpen, onClose }) {
       .finally(() => setLoading(false))
   }, [isOpen])
 
+  const handleDelete = (sessionId) => {
+    setSessions((prev) => prev.filter((s) => s.session_id !== sessionId))
+  }
+
   return (
     <>
       {/* Overlay */}
@@ -74,7 +78,11 @@ export default function SessionHistory({ isOpen, onClose }) {
             </div>
           )}
           {sessions.map((session) => (
-            <SessionCard key={session.session_id} session={session} />
+            <SessionCard
+              key={session.session_id}
+              session={session}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       </div>

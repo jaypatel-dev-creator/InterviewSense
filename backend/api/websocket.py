@@ -21,6 +21,25 @@ def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _extract_text(response) -> str:
+    """
+    langchain-google-genai returns response.content as a list of dicts:
+    [{'type': 'text', 'text': '...', 'extras': {'signature': '...'}}]
+    This is the standard format for gemini-3.x models via langchain-google-genai.
+    Extract all 'text' values and join them.
+    """
+    content = response.content
+    if isinstance(content, list):
+        return "".join(
+            part.get("text", "") if isinstance(part, dict) else
+            (part.text if hasattr(part, "text") else "")
+            for part in content
+        ).strip()
+    if isinstance(content, str):
+        return content.strip()
+    return str(content).strip()
+
+
 async def extract_jd_skills(jd_text: str) -> list[str]:
     if not jd_text or not jd_text.strip():
         return []
@@ -28,7 +47,7 @@ async def extract_jd_skills(jd_text: str) -> list[str]:
     prompt = build_jd_extractor_prompt(jd_text)
     try:
         response = await llm.ainvoke(prompt)
-        content = response.content.strip()
+        content = _extract_text(response)
         if content.startswith("```"):
             content = content.split("```")[1]
             if content.startswith("json"):
@@ -56,7 +75,7 @@ async def generate_first_question(
     try:
         logger.info(f"Generating first question — domain: {domain}, difficulty: {difficulty}")
         response = await llm.ainvoke(prompt)
-        question = response.content.strip()
+        question = _extract_text(response)
         logger.info(f"First question generated: {question[:80]}")
         return question
     except Exception as e:
@@ -147,10 +166,6 @@ async def handle_interview_websocket(
 
             # --- Audio chunk ---
             elif "bytes" in message:
-                # Guard — don't process audio after interview is complete.
-                # Silence detection can fire one extra time after the last
-                # answer, sending a phantom chunk that creates turn 6 on a
-                # 5-question session.
                 if state.get("interview_complete"):
                     continue
 
@@ -210,10 +225,6 @@ async def _process_answer(
         "timestamp": utcnow_iso(),
     }
 
-    # Don't append to state["turns"] before graph.ainvoke — the graph
-    # manages turns via the _replace_turns reducer. Appending here then
-    # letting the graph also return turns causes double-accumulation and
-    # drifts the question counter. Pass the new turn via state directly.
     state["turns"] = state["turns"] + [new_turn]
 
     logger.info(f"Running agent graph for turn {len(state['turns'])}")
@@ -221,7 +232,6 @@ async def _process_answer(
     state.update(result)
     logger.info("Agent graph complete.")
 
-    # Use the evaluated turn from state for DB insert
     evaluated_turn = state["turns"][-1]
 
     async with await get_db() as db:

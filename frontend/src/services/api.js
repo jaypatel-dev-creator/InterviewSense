@@ -17,6 +17,9 @@ export const listSessions = () =>
 export const getSession = (sessionId) =>
   api.get(`/api/sessions/${sessionId}`).then((r) => r.data)
 
+export const deleteSession = (sessionId) =>
+  api.delete(`/api/sessions/${sessionId}`)
+
 export const getSessionTurns = (sessionId) =>
   api.get(`/api/sessions/${sessionId}/turns`).then((r) => r.data)
 

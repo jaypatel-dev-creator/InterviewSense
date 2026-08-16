@@ -13,6 +13,7 @@ from db.queries import (
     get_session_by_id,
     get_turns_by_session,
     get_report_by_session,
+    delete_session,
 )
 from core.exceptions import SessionNotFoundException, ReportNotFoundException
 from core.config import get_settings
@@ -61,6 +62,14 @@ async def get_session(session_id: str):
     if session is None:
         raise SessionNotFoundException(session_id)
     return SessionResponse(**session)
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def remove_session(session_id: str):
+    async with await get_db() as db:
+        deleted = await delete_session(db, session_id)
+    if not deleted:
+        raise SessionNotFoundException(session_id)
 
 
 # --- Turns ---
@@ -117,6 +126,8 @@ async def text_to_speech(payload: dict):
         media_type="audio/mpeg",
         headers={"Content-Disposition": "inline"},
     )
+
+
 # --- Health ---
 
 @router.get("/health")
