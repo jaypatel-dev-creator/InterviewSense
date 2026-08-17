@@ -9,6 +9,30 @@ export default function QuestionBreakdown({ turns }) {
 
       <div className="space-y-3">
         {turns.map((turn, i) => {
+          // Skipped question — minimal card with badge
+          if (turn.skipped) {
+            return (
+              <div
+                key={turn.turn_id || i}
+                className="rounded-xl p-5 flex items-center justify-between"
+                style={{ backgroundColor: '#111118', border: '1px solid #1e1e2e' }}
+              >
+                <div className="space-y-1">
+                  <span className="text-xs font-mono" style={{ color: '#64748b' }}>Q{i + 1}</span>
+                  <p className="text-sm font-medium" style={{ color: '#f1f5f9' }}>
+                    {turn.question_text}
+                  </p>
+                </div>
+                <span
+                  className="text-xs font-medium px-2.5 py-1 rounded-md flex-shrink-0 ml-4"
+                  style={{ backgroundColor: 'rgba(100,116,139,0.15)', color: '#64748b', border: '1px solid #1e1e2e' }}
+                >
+                  Skipped
+                </span>
+              </div>
+            )
+          }
+
           const score = turn.correctness_score ?? 0
           const scoreColor =
             score >= 7 ? '#22c55e' : score >= 5 ? '#f59e0b' : '#ef4444'
@@ -21,21 +45,13 @@ export default function QuestionBreakdown({ turns }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 flex-1">
-                  <span
-                    className="text-xs font-mono"
-                    style={{ color: '#64748b' }}
-                  >
-                    Q{i + 1}
-                  </span>
+                  <span className="text-xs font-mono" style={{ color: '#64748b' }}>Q{i + 1}</span>
                   <p className="text-sm font-medium" style={{ color: '#f1f5f9' }}>
                     {turn.question_text}
                   </p>
                 </div>
                 <div className="flex-shrink-0 text-right">
-                  <span
-                    className="text-lg font-semibold font-mono"
-                    style={{ color: scoreColor }}
-                  >
+                  <span className="text-lg font-semibold font-mono" style={{ color: scoreColor }}>
                     {score.toFixed(1)}
                   </span>
                   <span className="text-xs" style={{ color: '#64748b' }}>/10</span>
@@ -63,9 +79,7 @@ export default function QuestionBreakdown({ turns }) {
                       Strengths
                     </span>
                     {turn.strengths.map((s, j) => (
-                      <p key={j} className="text-xs" style={{ color: '#86efac' }}>
-                        · {s}
-                      </p>
+                      <p key={j} className="text-xs" style={{ color: '#86efac' }}>· {s}</p>
                     ))}
                   </div>
                 )}
@@ -75,9 +89,7 @@ export default function QuestionBreakdown({ turns }) {
                       Missed
                     </span>
                     {turn.missing_concepts.map((m, j) => (
-                      <p key={j} className="text-xs" style={{ color: '#fcd34d' }}>
-                        · {m}
-                      </p>
+                      <p key={j} className="text-xs" style={{ color: '#fcd34d' }}>· {m}</p>
                     ))}
                   </div>
                 )}

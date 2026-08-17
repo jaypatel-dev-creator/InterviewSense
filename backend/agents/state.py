@@ -1,10 +1,10 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from typing_extensions import TypedDict
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
 
 
-class Turn(TypedDict):
+class Turn(TypedDict, total=False):
     turn_id: str
     question_text: str
     answer_transcript: str
@@ -15,6 +15,7 @@ class Turn(TypedDict):
     difficulty_adjustment: str
     speech_metrics: dict
     timestamp: str
+    skipped: bool  # True when question was skipped — no answer, no evaluation
 
 
 def _replace_turns(existing: list, updated: list) -> list:

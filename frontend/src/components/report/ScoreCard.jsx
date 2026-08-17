@@ -1,5 +1,6 @@
 function Score({ label, value, color, sublabel }) {
-  const pct = Math.min(100, (value / 10) * 100)
+  const isNA = value === null || value === undefined
+  const pct = isNA ? 0 : Math.min(100, (value / 10) * 100)
 
   return (
     <div
@@ -14,16 +15,27 @@ function Score({ label, value, color, sublabel }) {
           <p className="text-xs" style={{ color: '#475569' }}>{sublabel}</p>
         )}
       </div>
-      <div className="flex items-end gap-1">
-        <span className="text-4xl font-semibold font-mono" style={{ color }}>
-          {typeof value === 'number' ? value.toFixed(1) : '—'}
-        </span>
-        <span className="text-lg mb-1" style={{ color: '#64748b' }}>/10</span>
-      </div>
+      {isNA ? (
+        <div className="space-y-1">
+          <span className="text-2xl font-semibold font-mono" style={{ color: '#475569' }}>
+            N/A
+          </span>
+          <p className="text-xs" style={{ color: '#334155' }}>
+            Voice answers needed
+          </p>
+        </div>
+      ) : (
+        <div className="flex items-end gap-1">
+          <span className="text-4xl font-semibold font-mono" style={{ color }}>
+            {value.toFixed(1)}
+          </span>
+          <span className="text-lg mb-1" style={{ color: '#64748b' }}>/10</span>
+        </div>
+      )}
       <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: color }}
+          style={{ width: `${pct}%`, backgroundColor: isNA ? '#1e1e2e' : color }}
         />
       </div>
     </div>
@@ -34,6 +46,16 @@ export default function ScoreCard({ report }) {
   const composite = report.composite_score
   const compositeColor =
     composite >= 7 ? '#22c55e' : composite >= 5 ? '#f59e0b' : '#ef4444'
+
+  const commNA = report.communication_score === null || report.communication_score === undefined
+  const pacingNA = report.pacing_score === null || report.pacing_score === undefined
+
+  const compositeLabel = (() => {
+    if (!commNA && !pacingNA) return 'Technical 60% · Communication 25% · Pacing 15%'
+    if (!commNA) return 'Technical 85% · Communication 15%'
+    if (!pacingNA) return 'Technical 85% · Pacing 15%'
+    return 'Technical only (no voice answers)'
+  })()
 
   return (
     <div className="space-y-4">
@@ -56,7 +78,7 @@ export default function ScoreCard({ report }) {
             <span className="text-xl mb-1" style={{ color: '#64748b' }}>/10</span>
           </div>
           <p className="text-xs mt-2" style={{ color: '#475569' }}>
-            Technical 60% · Communication 25% · Pacing 15%
+            {compositeLabel}
           </p>
         </div>
         <div
@@ -72,7 +94,7 @@ export default function ScoreCard({ report }) {
         </div>
       </div>
 
-      {/* Sub scores — three distinct real metrics */}
+      {/* Sub scores */}
       <div className="grid grid-cols-3 gap-3">
         <Score
           label="Technical"
