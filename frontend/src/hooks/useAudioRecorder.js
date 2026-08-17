@@ -5,7 +5,7 @@ const SAMPLE_RATE = 16000
 const SILENCE_THRESHOLD = 0.02
 const SILENCE_DURATION_MS = 3000
 const MIN_AUDIO_SECONDS = 2.0
-const MIN_ENERGY = 0.005  // ambient noise is ~0.001, real speech is ~0.02+
+const MIN_ENERGY = 0.005  // ambient noise is ~0.001-0.003, real speech is ~0.01+
 
 export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const audioContextRef = useRef(null)
@@ -16,7 +16,12 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   const audioBufferRef = useRef([])
   const animFrameRef = useRef(null)
   const stopRef = useRef(null)
-  const peakEnergyRef = useRef(0)  // track peak energy seen in current recording
+  const peakEnergyRef = useRef(0)
+
+  // Ref so flushBuffer can call _teardown without a stale closure.
+  // flushBuffer's useCallback dep array only includes onAudioChunk — adding
+  // _teardown would create a circular dep chain. The ref breaks the cycle.
+  const teardownRef = useRef(null)
 
   const { setRecording, setError, isAISpeaking } = useUIStore()
 
@@ -46,6 +51,10 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     animFrameRef.current = requestAnimationFrame(tick)
   }, [getVolume, onVolumeChange])
 
+  // flushBuffer: send accumulated audio then IMMEDIATELY tear down the mic.
+  // Core fix — after each answer send, recording stops. User must click again
+  // for the next question. No continuous recording = no VAD on inter-question
+  // silence = no auto-advance.
   const flushBuffer = useCallback(() => {
     if (audioBufferRef.current.length === 0) return
 
@@ -61,18 +70,18 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
 
     const actualRate = audioContextRef.current?.sampleRate || 44100
 
-    // Duration guard — don't send clips under 2 seconds
+    // Duration guard — reject clips under 2 seconds, still tear down
     const durationSeconds = merged.length / actualRate
     if (durationSeconds < MIN_AUDIO_SECONDS) {
       peakEnergyRef.current = 0
+      teardownRef.current?.()
       return
     }
 
-    // Energy guard — don't send if peak energy never exceeded speech threshold.
-    // Ambient noise peaks at ~0.001-0.003. Real speech peaks at 0.01+.
-    // This kills the "3 seconds of room noise" false trigger entirely.
+    // Energy guard — ambient noise ~0.001-0.003, real speech ~0.01+, still tear down
     if (peakEnergyRef.current < MIN_ENERGY) {
       peakEnergyRef.current = 0
+      teardownRef.current?.()
       return
     }
     peakEnergyRef.current = 0
@@ -87,9 +96,24 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     } else {
       onAudioChunk?.(merged.buffer)
     }
+
+    // Tear down mic after send — prevents VAD firing on inter-question silence
+    teardownRef.current?.()
   }, [onAudioChunk])
 
   const _teardown = useCallback(() => {
+    // Idempotency guard — stop() calls flushBuffer() then _teardown().
+    // flushBuffer() now also calls _teardown() after sending.
+    // Without this guard, AudioContext closes twice → InvalidStateError.
+    if (
+      !processorRef.current &&
+      !analyserRef.current &&
+      !audioContextRef.current &&
+      !streamRef.current
+    ) {
+      return
+    }
+
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current)
       silenceTimerRef.current = null
@@ -108,9 +132,14 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
     setRecording(false)
   }, [setRecording])
 
+  // Keep teardownRef current so flushBuffer always calls the live version
+  useEffect(() => {
+    teardownRef.current = _teardown
+  }, [_teardown])
+
   const stop = useCallback(() => {
     flushBuffer()
-    _teardown()
+    _teardown()  // idempotent — safe if flushBuffer already ran it
   }, [flushBuffer, _teardown])
 
   const stopSilently = useCallback(() => {
@@ -124,6 +153,9 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
   }, [stop])
 
   const start = useCallback(async () => {
+    // Guard against double-clicks — don't open a second AudioContext
+    if (audioContextRef.current) return
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: SAMPLE_RATE, channelCount: 1, echoCancellation: true },
@@ -162,7 +194,6 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
 
         const vol = Math.max(...chunk.map(Math.abs))
 
-        // Track peak energy seen in this recording session
         if (vol > peakEnergyRef.current) {
           peakEnergyRef.current = vol
         }
@@ -170,8 +201,9 @@ export function useAudioRecorder(onAudioChunk, onVolumeChange) {
         if (vol < SILENCE_THRESHOLD) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
-              flushBuffer()
               silenceTimerRef.current = null
+              flushBuffer()
+              // flushBuffer handles teardown internally after send
             }, SILENCE_DURATION_MS)
           }
         } else {

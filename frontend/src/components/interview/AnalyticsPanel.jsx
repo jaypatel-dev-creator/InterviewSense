@@ -25,6 +25,46 @@ function MetricRow({ label, value, unit = '', max = 100, color = '#3b82f6' }) {
   )
 }
 
+// Pacing label — Slow / Good / Fast based on WPM thresholds.
+// Ideal interview pace: 120–160 wpm. Mirrors _compute_pacing_score on backend.
+function PacingBadge({ wpm }) {
+  if (!wpm || wpm === 0) return (
+    <span className="text-xs font-mono" style={{ color: '#64748b' }}>—</span>
+  )
+
+  let label, color
+  if (wpm < 100) {
+    label = 'Too slow'
+    color = '#f59e0b'
+  } else if (wpm < 120) {
+    label = 'A bit slow'
+    color = '#fbbf24'
+  } else if (wpm <= 160) {
+    label = 'Good pace'
+    color = '#22c55e'
+  } else if (wpm <= 190) {
+    label = 'A bit fast'
+    color = '#fbbf24'
+  } else {
+    label = 'Too fast'
+    color = '#ef4444'
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
+        {wpm.toFixed(0)} wpm
+      </span>
+      <span
+        className="text-xs font-medium px-1.5 py-0.5 rounded"
+        style={{ color, backgroundColor: `${color}18` }}
+      >
+        {label}
+      </span>
+    </div>
+  )
+}
+
 function EvaluationBlock({ evaluation }) {
   if (!evaluation) return null
 
@@ -80,19 +120,31 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
       </h3>
 
       <div className="space-y-4">
-        <MetricRow
-          label="Words per minute"
-          value={metrics?.wpm ?? 0}
-          unit=" wpm"
-          max={200}
-        />
-        <MetricRow
-          label="Confidence"
-          value={(metrics?.confidence_proxy ?? 0) * 100}
-          unit="%"
-          max={100}
-          color="#22c55e"
-        />
+        {/* Pacing — WPM bar + Slow/Good/Fast label */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: '#64748b' }}>Pacing</span>
+            <PacingBadge wpm={metrics?.wpm ?? 0} />
+          </div>
+          <div
+            className="h-1 rounded-full overflow-hidden"
+            style={{ backgroundColor: '#1e1e2e' }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, ((metrics?.wpm ?? 0) / 220) * 100)}%`,
+                backgroundColor: (() => {
+                  const wpm = metrics?.wpm ?? 0
+                  if (wpm >= 120 && wpm <= 160) return '#22c55e'
+                  if (wpm >= 100 && wpm <= 190) return '#fbbf24'
+                  return '#ef4444'
+                })(),
+              }}
+            />
+          </div>
+        </div>
+
         <MetricRow
           label="Energy level"
           value={(metrics?.energy_level ?? 0) * 1000}
@@ -148,4 +200,4 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
       </div>
     </div>
   )
-} 
+}

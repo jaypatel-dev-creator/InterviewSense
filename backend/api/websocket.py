@@ -83,6 +83,40 @@ async def generate_first_question(
         return f"Tell me about your experience with {domain.replace('_', ' ')}."
 
 
+def _compute_pacing_score(wpm: float) -> float:
+    """
+    Converts WPM to a 0–10 score.
+    Ideal interview pace is 120–160 wpm — score 10.
+    Outside that range score degrades linearly.
+    Below 80 or above 220 → floor at 2.0 (never zero — some speech happened).
+    Returns 0.0 if wpm is 0 (no speech detected).
+    """
+    if wpm <= 0:
+        return 0.0
+    if 120 <= wpm <= 160:
+        return 10.0
+    if wpm < 120:
+        # 80 wpm → 2.0, 120 wpm → 10.0
+        score = 2.0 + (wpm - 80) * (8.0 / 40)
+    else:
+        # 160 wpm → 10.0, 220 wpm → 2.0
+        score = 10.0 - (wpm - 160) * (8.0 / 60)
+    return round(max(2.0, min(10.0, score)), 2)
+
+
+def _compute_communication_score(energy_level: float) -> float:
+    """
+    Converts librosa RMS energy to a 0–10 communication score.
+    energy_level is raw RMS (typically 0.0 to ~0.15 for speech).
+    Rescales to 0–10 with a cap at 0.10 RMS = 10.0.
+    More meaningful than confidence_proxy which Groq hardcodes to 1.0.
+    """
+    if energy_level <= 0:
+        return 0.0
+    score = (energy_level / 0.10) * 10.0
+    return round(min(10.0, score), 2)
+
+
 async def handle_interview_websocket(
     websocket: WebSocket,
     session_id: str,
@@ -267,26 +301,50 @@ async def _finalize_session(
     improvement_plan = result.get("improvement_plan_text", "")
 
     turns = state["turns"]
+
+    # Technical score — avg correctness from Gemini evaluator (0–10)
     technical_scores = [
         t.get("correctness_score", 0.0)
         for t in turns
         if t.get("correctness_score") is not None
     ]
-    speech_scores = [
-        t.get("speech_metrics", {}).get("confidence_proxy", 0.0)
-        for t in turns
-    ]
     avg_technical = sum(technical_scores) / len(technical_scores) if technical_scores else 0.0
-    avg_speech = sum(speech_scores) / len(speech_scores) if speech_scores else 0.0
-    composite = round((avg_technical * 0.6 + avg_speech * 10 * 0.4), 2)
+
+    # Communication score — avg RMS energy rescaled to 0–10.
+    # Replaces confidence_proxy which Groq hardcodes to 1.0 (always 10.0, useless).
+    # energy_level is librosa RMS — real signal, varies with vocal projection.
+    # Text fallback answers have no audio so energy = 0 — excluded from avg.
+    energy_scores = [
+        _compute_communication_score(t.get("speech_metrics", {}).get("energy_level", 0.0))
+        for t in turns
+        if t.get("speech_metrics", {}).get("energy_level", 0.0) > 0
+    ]
+    avg_communication = sum(energy_scores) / len(energy_scores) if energy_scores else 0.0
+
+    # Pacing score — WPM converted to 0–10 (ideal 120–160 wpm = 10).
+    # Text fallback answers have wpm = 0 — excluded from avg.
+    wpm_scores = [
+        _compute_pacing_score(t.get("speech_metrics", {}).get("wpm", 0.0))
+        for t in turns
+        if t.get("speech_metrics", {}).get("wpm", 0.0) > 0
+    ]
+    avg_pacing = sum(wpm_scores) / len(wpm_scores) if wpm_scores else 0.0
+
+    # Composite — technical 60%, communication 25%, pacing 15%
+    composite = round(
+        avg_technical * 0.60 +
+        avg_communication * 0.25 +
+        avg_pacing * 0.15,
+        2
+    )
 
     report_id = str(uuid.uuid4())
     report = {
         "report_id": report_id,
         "session_id": session_id,
         "technical_score": round(avg_technical, 2),
-        "communication_score": round(avg_speech * 10, 2),
-        "speech_score": round(avg_speech * 10, 2),
+        "communication_score": round(avg_communication, 2),
+        "pacing_score": round(avg_pacing, 2),
         "composite_score": composite,
         "weak_topics": list({
             concept

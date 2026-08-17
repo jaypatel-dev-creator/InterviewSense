@@ -1,4 +1,4 @@
-function Score({ label, value, color }) {
+function Score({ label, value, color, sublabel }) {
   const pct = Math.min(100, (value / 10) * 100)
 
   return (
@@ -6,12 +6,17 @@ function Score({ label, value, color }) {
       className="rounded-xl p-5 space-y-4"
       style={{ backgroundColor: '#111118', border: '1px solid #1e1e2e' }}
     >
-      <span className="text-xs font-medium uppercase tracking-wider" style={{ color: '#64748b' }}>
-        {label}
-      </span>
+      <div className="space-y-0.5">
+        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: '#64748b' }}>
+          {label}
+        </span>
+        {sublabel && (
+          <p className="text-xs" style={{ color: '#475569' }}>{sublabel}</p>
+        )}
+      </div>
       <div className="flex items-end gap-1">
         <span className="text-4xl font-semibold font-mono" style={{ color }}>
-          {value?.toFixed(1) ?? '—'}
+          {typeof value === 'number' ? value.toFixed(1) : '—'}
         </span>
         <span className="text-lg mb-1" style={{ color: '#64748b' }}>/10</span>
       </div>
@@ -50,6 +55,9 @@ export default function ScoreCard({ report }) {
             </span>
             <span className="text-xl mb-1" style={{ color: '#64748b' }}>/10</span>
           </div>
+          <p className="text-xs mt-2" style={{ color: '#475569' }}>
+            Technical 60% · Communication 25% · Pacing 15%
+          </p>
         </div>
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center"
@@ -64,11 +72,26 @@ export default function ScoreCard({ report }) {
         </div>
       </div>
 
-      {/* Sub scores */}
+      {/* Sub scores — three distinct real metrics */}
       <div className="grid grid-cols-3 gap-3">
-        <Score label="Technical" value={report.technical_score} color="#3b82f6" />
-        <Score label="Communication" value={report.communication_score} color="#a78bfa" />
-        <Score label="Speech" value={report.speech_score} color="#22c55e" />
+        <Score
+          label="Technical"
+          sublabel="Answer correctness"
+          value={report.technical_score}
+          color="#3b82f6"
+        />
+        <Score
+          label="Communication"
+          sublabel="Vocal energy"
+          value={report.communication_score}
+          color="#a78bfa"
+        />
+        <Score
+          label="Pacing"
+          sublabel="120–160 wpm ideal"
+          value={report.pacing_score}
+          color="#22c55e"
+        />
       </div>
     </div>
   )
