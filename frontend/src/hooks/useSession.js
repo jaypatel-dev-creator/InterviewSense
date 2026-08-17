@@ -47,9 +47,12 @@ export function useSession() {
   }, [setSession, setScreen, setProcessing, setError, connect])
 
   const endSession = useCallback(() => {
+    // Send end_interview and let the backend finalize the session.
+    // Backend responds with report_ready → onMessage sets screen to 'report'.
+    // Disconnecting here immediately closes the socket before the message
+    // lands — backend never sees end_interview, report is never generated.
     sendControl('end_interview')
-    disconnect()
-  }, [sendControl, disconnect])
+  }, [sendControl])
 
   const resetAndGoHome = useCallback(() => {
     disconnect()

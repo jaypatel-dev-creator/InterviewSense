@@ -8,7 +8,7 @@ import { speakText } from '../services/tts'
 let _wsInstance = null
 
 export function useWebSocket() {
-  const { setQuestion, updateLiveTranscript, setLastEvaluation, setReport } = useSessionStore()
+  const { setQuestion, updateLiveTranscript, setLastEvaluation, setReport, setTurns } = useSessionStore()
   const { setAISpeaking, setProcessing, setError, setScreen } = useUIStore()
 
   const connect = useCallback((sessionId, params) => {
@@ -35,7 +35,10 @@ export function useWebSocket() {
 
           case 'report_ready':
             setReport(data.report)
+            setTurns(data.turns || [])
             setScreen('report')
+            _wsInstance?.disconnect()
+            _wsInstance = null
             break
 
           case 'error':
@@ -65,7 +68,7 @@ export function useWebSocket() {
     })
 
     _wsInstance.connect()
-  }, [setQuestion, updateLiveTranscript, setLastEvaluation, setReport, setAISpeaking, setProcessing, setError, setScreen])
+  }, [setQuestion, updateLiveTranscript, setLastEvaluation, setReport, setTurns, setAISpeaking, setProcessing, setError, setScreen])
 
   const sendAudio = useCallback((buffer) => {
     _wsInstance?.sendAudio(buffer)

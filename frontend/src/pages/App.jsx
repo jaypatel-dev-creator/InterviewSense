@@ -58,9 +58,9 @@ export default function App() {
             <button
               onClick={toggleSidebar}
               className="p-2 rounded-lg transition-colors"
-              style={{ color: '#2a2a2a' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#555'}
-              onMouseLeave={e => e.currentTarget.style.color = '#2a2a2a'}
+              style={{ color: '#64748b' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#94a3b8'}
+              onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
               aria-label="Toggle session history"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,8 +69,8 @@ export default function App() {
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <span className="font-semibold tracking-tight text-sm" style={{ color: '#2a2a2a' }}>
-              Interview<span style={{ color: '#1e3a5f' }}>Sense</span>
+            <span className="font-semibold tracking-tight text-sm" style={{ color: '#f1f5f9' }}>
+              Interview<span style={{ color: '#3b82f6' }}>Sense</span>
             </span>
           </div>
         )}

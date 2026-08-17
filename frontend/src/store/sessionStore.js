@@ -49,6 +49,9 @@ export const useSessionStore = create((set, get) => ({
   addTurn: (turn) =>
     set((state) => ({ turns: [...state.turns, turn] })),
 
+  setTurns: (turns) =>
+    set({ turns }),
+
   setLastEvaluation: (evaluation) =>
     set({ lastEvaluation: evaluation }),
 

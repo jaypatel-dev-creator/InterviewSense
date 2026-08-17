@@ -182,7 +182,7 @@ async def handle_interview_websocket(
 
                 elif data.get("type") == "end_interview":
                     await _finalize_session(websocket, state, session_id)
-                    break
+                    return  # socket closed by frontend after report_ready — stop receiving
 
                 elif data.get("type") == "repeat_question":
                     await websocket.send_json({
@@ -197,6 +197,17 @@ async def handle_interview_websocket(
                     if state["current_question_number"] > question_count:
                         await _finalize_session(websocket, state, session_id)
                         break
+                    # Run graph to generate next question and send it back.
+                    # Without this the frontend hangs — skip incremented state
+                    # but never received a question message to display.
+                    skip_result = await graph.ainvoke(state)
+                    state.update(skip_result)
+                    await websocket.send_json({
+                        "type": "question",
+                        "question": state["current_question"],
+                        "question_number": state["current_question_number"],
+                        "question_count": question_count,
+                    })
 
             # --- Audio chunk ---
             elif "bytes" in message:
@@ -228,6 +239,12 @@ async def handle_interview_websocket(
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected — session: {session_id}")
+    except RuntimeError as e:
+        if "disconnect message has been received" in str(e):
+            # Frontend closed the socket after receiving report_ready — expected, not an error
+            logger.info(f"Session complete, socket closed by client — session: {session_id}")
+        else:
+            logger.error(f"WebSocket runtime error — session {session_id}: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"WebSocket error — session {session_id}: {e}", exc_info=True)
         try:
@@ -363,6 +380,7 @@ async def _finalize_session(
     await websocket.send_json({
         "type": "report_ready",
         "report": report,
+        "turns": turns,  # full evaluated turn objects for frontend radar + breakdown
     })
 
     logger.info(f"Session finalized: {session_id}")
