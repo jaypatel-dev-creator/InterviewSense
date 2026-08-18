@@ -148,7 +148,7 @@ async def insert_report(db: aiosqlite.Connection, report: dict) -> None:
         """
         INSERT OR IGNORE INTO reports (
             report_id, session_id, technical_score, communication_score,
-            speech_score, composite_score, weak_topics,
+            pacing_score, composite_score, weak_topics,
             improvement_plan_text, langsmith_trace_url, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
@@ -157,7 +157,7 @@ async def insert_report(db: aiosqlite.Connection, report: dict) -> None:
             report["session_id"],
             report.get("technical_score"),
             report.get("communication_score"),
-            report.get("speech_score"),
+            report.get("pacing_score"),
             report.get("composite_score"),
             json.dumps(report.get("weak_topics", [])),
             report.get("improvement_plan_text"),

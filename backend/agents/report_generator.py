@@ -26,13 +26,21 @@ async def report_generator_node(state: SessionState) -> dict:
         for t in turns
         if t.get("correctness_score") is not None
     ]
-    speech_scores = [
-        t.get("speech_metrics", {}).get("confidence_proxy", 0.0)
+
+    # Use energy_level as vocal delivery proxy — confidence_proxy is dead
+    # (Groq hardcodes word probabilities to 1.0, making it always 1.0).
+    # energy_level is librosa RMS — actual signal, varies with delivery.
+    # Skipped questions have no speech_metrics so energy = 0 — excluded.
+    energy_scores = [
+        t.get("speech_metrics", {}).get("energy_level", 0.0)
         for t in turns
+        if t.get("speech_metrics", {}).get("energy_level", 0.0) > 0
     ]
 
     avg_technical = sum(technical_scores) / len(technical_scores) if technical_scores else 0.0
-    avg_speech = sum(speech_scores) / len(speech_scores) if speech_scores else 0.0
+    # Rescale to 0–10 (cap at 0.10 RMS = 10) to match websocket.py scoring
+    avg_energy_raw = sum(energy_scores) / len(energy_scores) if energy_scores else 0.0
+    avg_speech = min(10.0, (avg_energy_raw / 0.10) * 10.0)
 
     prompt = build_report_prompt(
         domain=state["domain"],
@@ -53,4 +61,4 @@ async def report_generator_node(state: SessionState) -> dict:
 
     return {
         "improvement_plan_text": improvement_plan,
-    } 
+    }

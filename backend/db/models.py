@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS reports (
     session_id             TEXT NOT NULL UNIQUE,
     technical_score        REAL,
     communication_score    REAL,
-    speech_score           REAL,
+    pacing_score           REAL,
     composite_score        REAL,
     weak_topics            TEXT,
     improvement_plan_text  TEXT,

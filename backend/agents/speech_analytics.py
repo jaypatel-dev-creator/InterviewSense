@@ -31,8 +31,8 @@ async def speech_analytics_node(state: SessionState) -> dict:
         f"Turn {len(turns)} — "
         f"WPM: {speech_metrics.get('wpm', 0)}, "
         f"Pauses: {speech_metrics.get('pause_count', 0)}, "
-        f"Fillers: {speech_metrics.get('filler_word_count', 0)}, "
-        f"Confidence: {speech_metrics.get('confidence_proxy', 0):.2f}"
+        f"Fillers: {speech_metrics.get('filler_word_count', 0)} "
+        
     )
 
     # No state mutation needed — metrics already in state from processor
