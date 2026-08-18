@@ -209,6 +209,17 @@ async def handle_interview_websocket(
                     }
                     state["turns"] = state["turns"] + [skipped_turn]
 
+                    # Persist skipped turn to DB so session history shows it.
+                    # _process_answer handles insert_turn for answered turns,
+                    # but skips bypass _process_answer entirely — without this,
+                    # the DB turns table has no record of skipped questions and
+                    # the history sidebar shows fewer questions than occurred.
+                    async with await get_db() as db:
+                        await insert_turn(db, {
+                            **skipped_turn,
+                            "session_id": session_id,
+                        })
+
                     state["current_question_number"] += 1
                     if state["current_question_number"] > question_count:
                         await _finalize_session(websocket, state, session_id)
@@ -334,6 +345,34 @@ async def _finalize_session(
     session_id: str,
 ):
     logger.info(f"Finalizing session: {session_id}")
+
+    # 0-turn guard — user ended the session before answering or skipping anything.
+    # report_generator_node raises AgentException on empty turns, so bypass the
+    # graph entirely and emit a minimal report so the frontend doesn't hang.
+    if not state["turns"]:
+        logger.warning(f"Session {session_id} ended with 0 turns — emitting empty report.")
+        empty_report = {
+            "report_id": str(uuid.uuid4()),
+            "session_id": session_id,
+            "technical_score": 0.0,
+            "communication_score": None,
+            "pacing_score": None,
+            "composite_score": 0.0,
+            "weak_topics": [],
+            "improvement_plan_text": "No questions were answered in this session.",
+            "langsmith_trace_url": "",
+            "created_at": utcnow_iso(),
+        }
+        async with await get_db() as db:
+            await update_session_end(db, session_id, utcnow_iso(), 0.0)
+            await insert_report(db, empty_report)
+        await websocket.send_json({
+            "type": "report_ready",
+            "report": empty_report,
+            "turns": [],
+        })
+        logger.info(f"Empty report sent for session: {session_id}")
+        return
 
     result = await build_graph().ainvoke({**state, "interview_complete": True})
     improvement_plan = result.get("improvement_plan_text", "")

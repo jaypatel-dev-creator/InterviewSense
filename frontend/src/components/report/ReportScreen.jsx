@@ -17,8 +17,8 @@ export default function ReportScreen() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-6 py-10 space-y-10">
+    <div style={{ width: "100%", overflowY: "auto", flex: 1 }}>
+      <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "2.5rem 1.5rem" }} className="space-y-10">
 
         {/* Header */}
         <div className="space-y-2">

@@ -53,7 +53,21 @@ async def report_generator_node(state: SessionState) -> dict:
 
     try:
         response = await llm.ainvoke(prompt)
-        improvement_plan = response.content
+        # gemini-3.x via langchain-google-genai returns response.content as
+        # list[dict] not str. Extract all text parts — same pattern as
+        # _extract_text() in websocket.py. Storing the raw list would serialize
+        # to "[object Object]" in the frontend and garbled text in the DB.
+        raw = response.content
+        if isinstance(raw, list):
+            improvement_plan = "".join(
+                part.get("text", "") if isinstance(part, dict) else
+                (part.text if hasattr(part, "text") else "")
+                for part in raw
+            ).strip()
+        elif isinstance(raw, str):
+            improvement_plan = raw.strip()
+        else:
+            improvement_plan = str(raw).strip()
     except Exception as e:
         raise AgentException(f"Report generator LLM call failed: {str(e)}")
 

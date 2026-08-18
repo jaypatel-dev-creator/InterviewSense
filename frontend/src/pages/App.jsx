@@ -8,7 +8,7 @@ export default function App() {
   const { screen, sidebarOpen, toggleSidebar, error, clearError } = useUIStore()
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#0a0a0a' }}>
+    <div className="min-h-screen flex w-full" style={{ backgroundColor: '#0a0a0a' }}>
       {/* Session History Sidebar */}
       <SessionHistory isOpen={sidebarOpen} onClose={toggleSidebar} />
 
@@ -91,7 +91,7 @@ export default function App() {
         )}
 
         {/* Screen Router */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col" style={{ width: "100%" }}>
           {screen === 'setup' && <SetupForm />}
           {screen === 'interview' && <InterviewScreen />}
           {screen === 'report' && <ReportScreen />}

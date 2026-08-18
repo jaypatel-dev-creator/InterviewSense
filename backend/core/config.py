@@ -6,17 +6,20 @@ class Settings(BaseSettings):
     # Google Gemini
     google_api_key: str
     groq_api_key: str
- 
+
     # ElevenLabs
     elevenlabs_api_key: str
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel — clean, neutral, professional
+    # No default — Rachel (21m00Tcm4TlvDq8ikWAM) is a library voice and
+    # is blocked on the ElevenLabs free tier. Set ELEVENLABS_VOICE_ID in
+    # .env to your custom Voice Design voice ID. App will fail fast at
+    # startup if this is missing rather than silently 401-ing on TTS calls.
+    elevenlabs_voice_id: str
 
     # App
     app_env: str = "development"
 
     # Database
     sqlite_db_path: str = "./data/sessions/interviewsense.db"
-
 
     model_config = SettingsConfigDict(
         env_file=".env",

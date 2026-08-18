@@ -5,8 +5,16 @@ from core.logging import get_logger
 logger = get_logger(__name__)
 
 FILLER_WORDS = {
-    "um", "uh", "umm", "uhh", "like", "you know",
-    "basically", "literally", "actually", "sort of", "kind of",
+    # Hesitation sounds
+    "um", "uh", "umm", "uhh", "er", "err", "hmm",
+    # Discourse fillers — extremely common in interview speech
+    "so", "right", "okay", "ok", "well", "now",
+    # Hedges and padding
+    "like", "basically", "literally", "actually", "honestly",
+    "essentially", "technically", "generally", "obviously",
+    # Two-word fillers
+    "you know", "sort of", "kind of", "i mean", "i guess",
+    "you see", "as i", "so yeah",
 }
 
 

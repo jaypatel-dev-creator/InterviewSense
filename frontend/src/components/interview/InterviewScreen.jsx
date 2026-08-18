@@ -24,6 +24,11 @@ export default function InterviewScreen() {
   const [textFallback, setTextFallback] = useState(false)
   const [textInput, setTextInput] = useState('')
 
+  // Skip double-click guard — 1500ms lock prevents sending skip_question twice.
+  // Without this, rapid double-click sends two messages: backend skips the
+  // current question AND the next one before it's even displayed.
+  const skipLockRef = useRef(false)
+
   const { start, stop, stopSilently } = useAudioRecorder(
     (buffer) => sendAudio(buffer),
     (vol) => setVolume(vol),
@@ -54,7 +59,12 @@ export default function InterviewScreen() {
   }
 
   const handleRepeat = () => sendControl('repeat_question')
-  const handleSkip = () => sendControl('skip_question')
+  const handleSkip = () => {
+    if (skipLockRef.current || isProcessing) return
+    skipLockRef.current = true
+    sendControl('skip_question')
+    setTimeout(() => { skipLockRef.current = false }, 1500)
+  }
 
   return (
     <div className="flex-1 flex flex-col" style={{ backgroundColor: '#0a0a0f' }}>
@@ -192,7 +202,7 @@ export default function InterviewScreen() {
                 placeholder="Type your answer here..."
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg text-sm resize-none"
+                className="w-full px-4 py-3 rounded-lg text-sm resize-none answer-textarea"
                 style={{
                   backgroundColor: '#111118',
                   border: '1px solid #1e1e2e',
