@@ -58,7 +58,7 @@ export default function SessionCard({ session, onDelete }) {
           {DOMAIN_LABELS[session.domain] || session.domain}
         </span>
         <span className="text-xs font-mono font-semibold" style={{ color: scoreColor }}>
-          {score != null ? `${score.toFixed(1)}/10` : 'In progress'}
+          {score != null ? `${score.toFixed(1)}/10` : 'Incomplete'}
         </span>
       </div>
       <div className="flex items-center justify-between">
