@@ -76,7 +76,6 @@ Audio is captured in streaming `Float32Array` chunks via the Web Audio API, proc
 | VAD | Silero VAD 6.2.1 |
 | Paralinguistics | librosa 0.10.2, numpy, scipy |
 | Database | SQLite via aiosqlite |
-| Observability | LangSmith |
 
 ---
 
