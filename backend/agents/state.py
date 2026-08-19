@@ -47,3 +47,6 @@ class SessionState(TypedDict):
 
     # Session control
     interview_complete: bool
+
+    # Report output — populated by report_generator_node
+    improvement_plan_text: str

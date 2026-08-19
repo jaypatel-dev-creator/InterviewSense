@@ -34,8 +34,14 @@ export function useWebSocket() {
             break
 
           case 'report_ready':
-            setReport(data.report)
-            setTurns(data.turns || [])
+            // Set report, turns, and screen atomically in one store update
+            // to prevent ReportScreen from rendering with stale data between
+            // individual setX calls. Disconnect after state is committed.
+            useSessionStore.setState({
+              report: data.report,
+              turns: data.turns || [],
+              interviewComplete: true,
+            })
             setScreen('report')
             _wsInstance?.disconnect()
             _wsInstance = null
@@ -90,5 +96,3 @@ export function useWebSocket() {
 
   return { connect, sendAudio, sendText, sendControl, disconnect }
 }
-
-

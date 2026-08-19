@@ -53,6 +53,7 @@ async def report_generator_node(state: SessionState) -> dict:
 
     try:
         response = await llm.ainvoke(prompt)
+        logger.debug(f"Raw response.content type: {type(response.content)}, value: {repr(response.content)[:300]}")
         # gemini-3.x via langchain-google-genai returns response.content as
         # list[dict] not str. Extract all text parts — same pattern as
         # _extract_text() in websocket.py. Storing the raw list would serialize
