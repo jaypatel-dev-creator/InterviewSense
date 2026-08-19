@@ -375,7 +375,7 @@ async def _finalize_session(
         return
 
     result = await build_graph().ainvoke({**state, "interview_complete": True})
-    improvement_plan = result.get("improvement_plan_text", "")
+    improvement_plan = result.get("improvement_plan_text", "") or "No improvement plan was generated for this session."
 
     turns = state["turns"]
     question_count = state["question_count"]

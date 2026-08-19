@@ -165,7 +165,7 @@ export default function SetupForm() {
                       className="w-full px-5 py-4 rounded-xl text-left transition-all"
                       style={{
                         backgroundColor: form.difficulty === d.value ? 'rgba(59,130,246,0.07)' : '#0d0d0d',
-                        border: `1px solid ${form.difficulty === d.value ? '#3b82f6' : '#1a1a1a'}`,
+                        border: `1px solid ${form.difficulty === d.value ? '#3b82f6' : '#2a2a2a'}`,
                       }}
                     >
                       <div className="flex items-center justify-between">
@@ -199,7 +199,7 @@ export default function SetupForm() {
                       onClick={() => setForm({ ...form, questionCount: n })}
                       className="py-4 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1"
                       style={{
-                        backgroundColor: form.questionCount === n ? 'rgba(59,130,246,0.07)' : '#0d0d0d',
+                        backgroundColor: form.questionCount === n ? 'rgba(59,130,246,0.07)' : '#111118',
                         border: `1px solid ${form.questionCount === n ? '#3b82f6' : '#1a1a1a'}`,
                         color: form.questionCount === n ? '#60a5fa' : '#444',
                       }}

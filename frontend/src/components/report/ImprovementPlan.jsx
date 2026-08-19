@@ -1,5 +1,5 @@
 export default function ImprovementPlan({ plan }) {
-  if (!plan) return null
+  if (!plan || plan.trim().length === 0) return null
 
   const paragraphs = plan.split('\n').filter((p) => p.trim().length > 0)
 
@@ -36,4 +36,4 @@ export default function ImprovementPlan({ plan }) {
       </div>
     </div>
   )
-}
+}w
