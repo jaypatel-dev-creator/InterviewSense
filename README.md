@@ -7,7 +7,6 @@
 ![Gemini](https://img.shields.io/badge/Gemini-3.1_Flash_Lite-4285F4?style=flat&logo=google&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-Whisper_v3_Turbo-F55036?style=flat)
 ![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-000000?style=flat)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 ![Status](https://img.shields.io/badge/Status-Local_Demo-yellow?style=flat)
 
 A voice-native AI interview coach that simulates real technical interviews end-to-end — adaptive questioning, paralinguistic analysis, and a structured post-session report. Built as a full-stack production system with a multi-agent LangGraph backend and a React frontend.
@@ -123,7 +122,14 @@ ElevenLabs blocks library voices on the free tier. The app requires a custom Voi
 **4. Gemini free tier rate limits**
 The evaluator-router and report generator use Gemini 3.1 Flash Lite (15 RPM, 1500 RPD on free tier). Heavy testing across multiple sessions in a short window may exhaust the daily quota, causing the report generator to return empty output. Upgrading to a paid Gemini tier removes this constraint.
 
-**5. Local only — no deployment**
+**5. Per-turn latency — chained API calls**
+Each voice answer triggers three operations in sequence: Groq Whisper transcription (~1–2s) + librosa CPU audio analysis (~1–3s, runs in parallel with Whisper on a CPU-only machine) + Gemini evaluator-router structured output call (~2–4s). Combined with ElevenLabs TTS synthesis for the next question (~1–2s), expect 5–10 seconds between submitting an answer and hearing the next question.
+
+Final report generation adds an additional 5–10 seconds — the report generator sends the full session context (all 5 turns, scores, domain, difficulty, candidate name) to Gemini in a single prompt, which is token-heavy and requires a complete response before the report screen renders. There is no streaming of the improvement plan — the frontend waits for the full `report_ready` WebSocket event.
+
+This is an API latency and hardware constraint, not an architectural one. Switching to GPU-backed inference (e.g. Groq's faster tiers, Gemini paid tier) and a streaming STT provider would reduce per-turn latency to under 2 seconds. Report generation latency could be reduced by streaming the improvement plan text incrementally over WebSocket as Gemini generates it.
+
+**6. Local only — no deployment**
 InterviewSense is designed for local use. The audio pipeline requires direct microphone access via the Web Audio API, which works reliably on localhost. Deploying to a remote server introduces latency in the WebSocket audio stream that degrades VAD accuracy and transcript quality.
 
 ---
