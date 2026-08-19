@@ -62,6 +62,10 @@ export class InterviewWebSocket {
     }
   }
 
+  isConnected() {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN
+  }
+
   disconnect() {
     this.ws?.close()
   }

@@ -4,17 +4,26 @@ import { useSessionStore } from '../store/sessionStore'
 import { useUIStore } from '../store/uiStore'
 import { speakText } from '../services/tts'
 
-// Module-level singleton — shared across all hook instances
-let _wsInstance = null
-
 export function useWebSocket() {
   const { setQuestion, updateLiveTranscript, setLastEvaluation, setReport, setTurns } = useSessionStore()
   const { setAISpeaking, setProcessing, setError, setScreen } = useUIStore()
 
+  // useRef instead of module-level singleton — scoped to this hook instance,
+  // created fresh per session, never shared across renders or sessions.
+  // The previous singleton pattern caused stale connection reuse across sessions
+  // because WebSocket connections are stateful (bound to a session ID + server state).
+  const wsRef = useRef(null)
+
   const connect = useCallback((sessionId, params) => {
+    // Guard against duplicate connections from React strict mode double-invoke
+    if (wsRef.current?.isConnected?.()) {
+      console.warn('WS already connected — skipping duplicate connect')
+      return
+    }
+
     const url = buildInterviewWSUrl(sessionId, params)
 
-    _wsInstance = new InterviewWebSocket(url, {
+    wsRef.current = new InterviewWebSocket(url, {
       onOpen: () => {
         console.log('WS connected')
         setProcessing(false)
@@ -37,8 +46,8 @@ export function useWebSocket() {
             setReport(data.report)
             setTurns(data.turns || [])
             setScreen('report')
-            _wsInstance?.disconnect()
-            _wsInstance = null
+            wsRef.current?.disconnect()
+            wsRef.current = null
             break
 
           case 'error':
@@ -67,26 +76,26 @@ export function useWebSocket() {
       },
     })
 
-    _wsInstance.connect()
+    wsRef.current.connect()
   }, [setQuestion, updateLiveTranscript, setLastEvaluation, setReport, setTurns, setAISpeaking, setProcessing, setError, setScreen])
 
   const sendAudio = useCallback((buffer) => {
-    _wsInstance?.sendAudio(buffer)
+    wsRef.current?.sendAudio(buffer)
   }, [])
 
   const sendText = useCallback((text) => {
-    _wsInstance?.sendText(text)
+    wsRef.current?.sendText(text)
     setProcessing(true)
   }, [setProcessing])
 
   const sendControl = useCallback((type) => {
-    _wsInstance?.sendControl(type)
+    wsRef.current?.sendControl(type)
   }, [])
 
   const disconnect = useCallback(() => {
-    _wsInstance?.disconnect()
-    _wsInstance = null
+    wsRef.current?.disconnect()
+    wsRef.current = null
   }, [])
 
   return { connect, sendAudio, sendText, sendControl, disconnect }
-}
+}we

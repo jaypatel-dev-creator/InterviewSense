@@ -1,4 +1,5 @@
 export default function ImprovementPlan({ plan }) {
+  console.log('[ImprovementPlan] received plan:', JSON.stringify(plan?.slice(0, 100)))
   if (!plan || plan.trim().length === 0) return null
 
   const paragraphs = plan.split('\n').filter((p) => p.trim().length > 0)

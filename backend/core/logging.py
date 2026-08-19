@@ -25,6 +25,13 @@ def setup_logging(app_env: str = "development") -> None:
         "numba",
         "audioread",
         "librosa",
+        # Groq HTTP client dumps raw binary audio bytes at DEBUG level
+        "groq._base_client",
+        "groq",
+        # ElevenLabs and google-genai HTTP noise
+        "elevenlabs",
+        "google_genai",
+        "google.ai.generativelanguage",
     ]:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
