@@ -131,6 +131,12 @@ This is an API latency and hardware constraint, not an architectural one. Switch
 **6. Local only — no deployment**
 InterviewSense is designed for local use. The audio pipeline requires direct microphone access via the Web Audio API, which works reliably on localhost. Deploying to a remote server introduces latency in the WebSocket audio stream that degrades VAD accuracy and transcript quality.
 
+**7. STT accuracy — technical jargon**
+`whisper-large-v3-turbo` is a distilled version of `whisper-large-v3`, approximately 8x faster but with reduced accuracy on accented speech and domain-specific terminology. In an AI/ML interview context, terms like "RLHF", "LangGraph", "tokenization", or framework names may occasionally be mistranscribed — which affects the evaluator's scoring since it reads the transcript, not the original audio. Upgrading to full `whisper-large-v3` on Groq improves accuracy at the cost of higher latency and faster quota consumption.
+
+**8. Evaluation depth — Gemini Flash Lite**
+The evaluator-router and report generator use Gemini 3.1 Flash Lite — the smallest and fastest model in the Gemini family. For straightforward correctness evaluation it performs well. For nuanced rubrics — detecting partial understanding, identifying subtle misconceptions, or distinguishing a surface-level answer from a deep one — a larger model (Gemini Pro, GPT-4o) would produce meaningfully better evaluation quality. The improvement plan depth directly reflects this constraint.
+
 ---
 
 ## Local Setup
@@ -174,3 +180,11 @@ InterviewSense/
 ```
 
 ---
+## Future Improvements
+
+- **Migrate to `AudioWorkletNode`** — replace the deprecated `ScriptProcessorNode` with a dedicated audio thread for more stable, lower-latency mic capture
+- **Streaming STT provider** — swap `audio/transcriber.py` to Deepgram Nova-3 for true word-by-word transcript updates with zero architectural changes
+- **Stronger evaluation model** — upgrade evaluator-router and report generator to Gemini Pro or GPT-4o for deeper rubric evaluation and higher-quality improvement plans
+- **Behavioural / HR question domain** — STAR-format evaluation with narrative structure scoring
+- **Deployment** — containerize backend with Docker, serve frontend via CDN; primary blocker is WebSocket audio latency on remote servers
+- **Streaming improvement plan** — stream report generator output incrementally over WebSocket instead of waiting for the full response before rendering

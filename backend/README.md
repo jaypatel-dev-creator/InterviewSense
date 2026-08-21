@@ -121,6 +121,10 @@ Binary WebSocket frame (Float32Array)
 
 Whisper and librosa run concurrently in a `ThreadPoolExecutor`. After both complete, word-derived metrics (WPM, pause count, filler count) are merged into the signal analysis result selectively — avoiding a second full librosa run.
 
+### STT Provider Abstraction
+
+The STT pipeline is implemented as a hardware-agnostic streaming pipeline via WebSocket. The current provider (Groq `whisper-large-v3-turbo`) uses chunk-based transcription — VAD detects silence, the full chunk is sent, and the transcript returns in ~1–2 seconds. Swapping to Deepgram Nova-3 for true word-by-word streaming requires changing only `audio/transcriber.py` — zero changes to the WebSocket handler, audio processor, or any agent code.
+
 ---
 
 ## WebSocket Protocol
