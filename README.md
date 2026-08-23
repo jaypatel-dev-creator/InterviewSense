@@ -149,7 +149,6 @@ See [`backend/README.md`](backend/README.md) for backend setup and [`frontend/RE
 - Google Gemini — [aistudio.google.com](https://aistudio.google.com)
 - Groq — [console.groq.com](https://console.groq.com)
 - ElevenLabs — [elevenlabs.io](https://elevenlabs.io) (free tier; requires custom Voice Design voice — library voices are blocked on free tier)
-- LangSmith — [smith.langchain.com](https://smith.langchain.com) (optional, for tracing)
 
 ---
 

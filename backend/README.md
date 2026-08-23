@@ -44,8 +44,6 @@ GOOGLE_API_KEY=your_gemini_key
 GROQ_API_KEY=your_groq_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 ELEVENLABS_VOICE_ID=your_voice_design_voice_id
-LANGCHAIN_API_KEY=your_langsmith_key       # optional
-LANGCHAIN_TRACING_V2=true                  # optional
 APP_ENV=development
 SQLITE_DB_PATH=./data/sessions/interviewsense.db
 ```
@@ -218,7 +216,6 @@ CREATE TABLE reports (
     composite_score REAL,
     weak_topics TEXT,         -- JSON array
     improvement_plan_text TEXT,
-    langsmith_trace_url TEXT,
     created_at TEXT NOT NULL
 );
 ```
