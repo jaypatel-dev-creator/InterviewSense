@@ -9,13 +9,13 @@
 ![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-000000?style=flat)
 ![Status](https://img.shields.io/badge/Status-Local_Demo-yellow?style=flat)
 
-A voice-native AI interview coach that simulates real technical interviews end-to-end — adaptive questioning, paralinguistic analysis, and a structured post-session report. Built as a full-stack production system with a multi-agent LangGraph backend and a React frontend.
+A voice-native AI interview coach that simulates real technical interviews end-to-end — adaptive questioning, paralinguistic analysis, and a structured post-session report. Built as a full-stack production system with a LangGraph evaluation pipeline backend and a React frontend.
 
 ---
 
 ## What It Does
 
-InterviewSense conducts a complete mock technical interview using your microphone or text input, then evaluates your performance across three dimensions:
+InterviewSense conducts a complete mock technical interview using your microphone as primary source  or text input as a fallback , then evaluates your performance across three dimensions:
 
 - **Technical accuracy** — per-question correctness scored by an LLM evaluator
 - **Communication** — vocal energy measured via librosa RMS analysis
@@ -48,14 +48,14 @@ FastAPI Backend
             (improvement plan, weak topics, study recommendations)
 ```
 
-### Multi-Agent Design
+### LangGraph Pipeline Design
 
 Three LangGraph nodes operate as a directed graph with a conditional edge:
 
 - After each answer, `speech_analytics_node` → `evaluator_router_node` → END
 - After the final answer, `speech_analytics_node` → `report_generator_node` → END
 
-The evaluator-router merges what would otherwise be two separate agents — evaluation and next-question generation — into a single structured LLM call, minimising latency and API cost per turn.
+The evaluator-router merges evaluation and next-question generation into a single structured LLM call, minimising latency and API cost per turn.
 
 ### Chunk-Based Transcript Pipeline
 
@@ -131,12 +131,6 @@ This is an API latency and hardware constraint, not an architectural one. Switch
 **6. Local only — no deployment**
 InterviewSense is designed for local use. The audio pipeline requires direct microphone access via the Web Audio API, which works reliably on localhost. Deploying to a remote server introduces latency in the WebSocket audio stream that degrades VAD accuracy and transcript quality.
 
-**7. STT accuracy — technical jargon**
-`whisper-large-v3-turbo` is a distilled version of `whisper-large-v3`, approximately 8x faster but with reduced accuracy on accented speech and domain-specific terminology. In an AI/ML interview context, terms like "RLHF", "LangGraph", "tokenization", or framework names may occasionally be mistranscribed — which affects the evaluator's scoring since it reads the transcript, not the original audio. Upgrading to full `whisper-large-v3` on Groq improves accuracy at the cost of higher latency and faster quota consumption.
-
-**8. Evaluation depth — Gemini Flash Lite**
-The evaluator-router and report generator use Gemini 3.1 Flash Lite — the smallest and fastest model in the Gemini family. For straightforward correctness evaluation it performs well. For nuanced rubrics — detecting partial understanding, identifying subtle misconceptions, or distinguishing a surface-level answer from a deep one — a larger model (Gemini Pro, GPT-4o) would produce meaningfully better evaluation quality. The improvement plan depth directly reflects this constraint.
-
 ---
 
 ## Local Setup
@@ -149,6 +143,7 @@ See [`backend/README.md`](backend/README.md) for backend setup and [`frontend/RE
 - Google Gemini — [aistudio.google.com](https://aistudio.google.com)
 - Groq — [console.groq.com](https://console.groq.com)
 - ElevenLabs — [elevenlabs.io](https://elevenlabs.io) (free tier; requires custom Voice Design voice — library voices are blocked on free tier)
+- LangSmith — [smith.langchain.com](https://smith.langchain.com) (optional, for tracing)
 
 ---
 
@@ -179,11 +174,3 @@ InterviewSense/
 ```
 
 ---
-## Future Improvements
-
-- **Migrate to `AudioWorkletNode`** — replace the deprecated `ScriptProcessorNode` with a dedicated audio thread for more stable, lower-latency mic capture
-- **Streaming STT provider** — swap `audio/transcriber.py` to Deepgram Nova-3 for true word-by-word transcript updates with zero architectural changes
-- **Stronger evaluation model** — upgrade evaluator-router and report generator to Gemini Pro or GPT-4o for deeper rubric evaluation and higher-quality improvement plans
-- **Behavioural / HR question domain** — STAR-format evaluation with narrative structure scoring
-- **Deployment** — containerize backend with Docker, serve frontend via CDN; primary blocker is WebSocket audio latency on remote servers
-- **Streaming improvement plan** — stream report generator output incrementally over WebSocket instead of waiting for the full response before rendering

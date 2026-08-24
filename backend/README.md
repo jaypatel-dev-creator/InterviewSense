@@ -1,6 +1,6 @@
 # InterviewSense — Backend
 
-FastAPI + LangGraph backend for InterviewSense. Handles WebSocket session management, audio processing, multi-agent evaluation, and report generation.
+FastAPI + LangGraph backend for InterviewSense. Handles WebSocket session management, audio processing, LangGraph pipeline evaluation, and report generation.
 
 ---
 
@@ -44,6 +44,8 @@ GOOGLE_API_KEY=your_gemini_key
 GROQ_API_KEY=your_groq_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 ELEVENLABS_VOICE_ID=your_voice_design_voice_id
+LANGCHAIN_API_KEY=your_langsmith_key       # optional
+LANGCHAIN_TRACING_V2=true                  # optional
 APP_ENV=development
 SQLITE_DB_PATH=./data/sessions/interviewsense.db
 ```
@@ -118,10 +120,6 @@ Binary WebSocket frame (Float32Array)
 ```
 
 Whisper and librosa run concurrently in a `ThreadPoolExecutor`. After both complete, word-derived metrics (WPM, pause count, filler count) are merged into the signal analysis result selectively — avoiding a second full librosa run.
-
-### STT Provider Abstraction
-
-The STT pipeline is implemented as a hardware-agnostic streaming pipeline via WebSocket. The current provider (Groq `whisper-large-v3-turbo`) uses chunk-based transcription — VAD detects silence, the full chunk is sent, and the transcript returns in ~1–2 seconds. Swapping to Deepgram Nova-3 for true word-by-word streaming requires changing only `audio/transcriber.py` — zero changes to the WebSocket handler, audio processor, or any agent code.
 
 ---
 
@@ -216,6 +214,7 @@ CREATE TABLE reports (
     composite_score REAL,
     weak_topics TEXT,         -- JSON array
     improvement_plan_text TEXT,
+    langsmith_trace_url TEXT,
     created_at TEXT NOT NULL
 );
 ```
