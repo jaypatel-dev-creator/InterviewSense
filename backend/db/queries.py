@@ -59,10 +59,15 @@ async def get_session_by_id(
 async def delete_session(db: AsyncSession, session_id: str) -> bool:
     """
     Deletes a session and all associated turns and reports.
-    Cascade handled by SQLAlchemy relationship(cascade='all, delete-orphan')
-    defined in models.py — no manual child deletion needed.
     Returns True if a session was deleted, False if not found.
+
+    Note: cascade='all, delete-orphan' on the ORM relationship only fires for
+    ORM-level object deletion (load object → session.delete(obj)). Bulk SQL
+    DELETE via db.execute(delete(Model)) bypasses the ORM entirely — cascade
+    does not fire. Manual child deletion is required to avoid FK violations.
     """
+    await db.execute(delete(Turn).where(Turn.session_id == session_id))
+    await db.execute(delete(Report).where(Report.session_id == session_id))
     result = await db.execute(
         delete(Session).where(Session.session_id == session_id)
     )
@@ -81,7 +86,8 @@ async def delete_all_sessions(db: AsyncSession) -> int:
     count_result = await db.execute(select(func.count()).select_from(Session))
     count = count_result.scalar() or 0
 
-    # Cascade in models handles turns and reports automatically
+    # Manual child deletion required — bulk SQL DELETE bypasses ORM cascade.
+    # Delete children before parent to respect FK constraints.
     await db.execute(delete(Turn))
     await db.execute(delete(Report))
     await db.execute(delete(Session))

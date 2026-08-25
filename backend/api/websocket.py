@@ -169,6 +169,10 @@ async def handle_interview_websocket(
             "turns": [],
             "messages": [],
             "interview_complete": False,
+            "improvement_plan_text": "",
+            # Required by SessionState TypedDict — populated by report_generator_node
+            # at session end. Empty string here satisfies the contract without
+            # affecting any node that runs before _finalize_session.
         }
 
         await websocket.send_json({
