@@ -1,56 +1,78 @@
-import aiosqlite
+from sqlalchemy import (
+    String,
+    Integer,
+    Float,
+    Boolean,
+    JSON,
+    ForeignKey,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 from core.logging import get_logger
 
 logger = get_logger(__name__)
 
-CREATE_SESSIONS_TABLE = """
-CREATE TABLE IF NOT EXISTS sessions (
-    session_id      TEXT PRIMARY KEY,
-    candidate_name  TEXT,
-    domain          TEXT NOT NULL,
-    difficulty      TEXT NOT NULL,
-    question_count  INTEGER NOT NULL,
-    jd_text         TEXT,
-    start_time      TEXT NOT NULL,
-    end_time        TEXT,
-    composite_score REAL
-);
-"""
 
-CREATE_TURNS_TABLE = """
-CREATE TABLE IF NOT EXISTS turns (
-    turn_id              TEXT PRIMARY KEY,
-    session_id           TEXT NOT NULL,
-    question_text        TEXT NOT NULL,
-    answer_transcript    TEXT,
-    correctness_score    REAL,
-    speech_metrics       TEXT,
-    next_question_type   TEXT,
-    timestamp            TEXT NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
-);
-"""
-
-CREATE_REPORTS_TABLE = """
-CREATE TABLE IF NOT EXISTS reports (
-    report_id              TEXT PRIMARY KEY,
-    session_id             TEXT NOT NULL UNIQUE,
-    technical_score        REAL,
-    communication_score    REAL,
-    pacing_score           REAL,
-    composite_score        REAL,
-    weak_topics            TEXT,
-    improvement_plan_text  TEXT,
-    langsmith_trace_url    TEXT,
-    created_at             TEXT NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
-);
-"""
+class Base(DeclarativeBase):
+    pass
 
 
-async def create_tables(db: aiosqlite.Connection) -> None:
-    await db.execute(CREATE_SESSIONS_TABLE)
-    await db.execute(CREATE_TURNS_TABLE)
-    await db.execute(CREATE_REPORTS_TABLE)
-    await db.commit()
-    logger.info("Database tables created or verified.")
+class Session(Base):
+    __tablename__ = "sessions"
+
+    session_id: Mapped[str] = mapped_column(String, primary_key=True)
+    candidate_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    domain: Mapped[str] = mapped_column(String, nullable=False)
+    difficulty: Mapped[str] = mapped_column(String, nullable=False)
+    question_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    jd_text: Mapped[str | None] = mapped_column(String, nullable=True)
+    start_time: Mapped[str] = mapped_column(String, nullable=False)
+    end_time: Mapped[str | None] = mapped_column(String, nullable=True)
+    composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    turns: Mapped[list["Turn"]] = relationship(
+        "Turn", back_populates="session", cascade="all, delete-orphan"
+    )
+    report: Mapped["Report | None"] = relationship(
+        "Report", back_populates="session", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class Turn(Base):
+    __tablename__ = "turns"
+
+    turn_id: Mapped[str] = mapped_column(String, primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sessions.session_id"), nullable=False
+    )
+    question_text: Mapped[str] = mapped_column(String, nullable=False)
+    answer_transcript: Mapped[str | None] = mapped_column(String, nullable=True)
+    correctness_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    speech_metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # JSON column — SQLAlchemy handles serialization automatically.
+    # No more manual json.dumps/json.loads in queries.py.
+    next_question_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    timestamp: Mapped[str] = mapped_column(String, nullable=False)
+    skipped: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+    session: Mapped["Session"] = relationship("Session", back_populates="turns")
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    report_id: Mapped[str] = mapped_column(String, primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sessions.session_id"), nullable=False, unique=True
+    )
+    technical_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    communication_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pacing_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weak_topics: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # JSON column — stored as a JSON array, returned as a Python list automatically.
+    improvement_plan_text: Mapped[str | None] = mapped_column(String, nullable=True)
+    langsmith_trace_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    session: Mapped["Session"] = relationship("Session", back_populates="report")

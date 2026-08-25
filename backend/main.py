@@ -13,8 +13,7 @@ from core.exceptions import (
 
 from api.routes import router
 from api.websocket import handle_interview_websocket
-from db.database import init_db_path, get_db
-from db.models import create_tables
+from db.database import init_db
 from agents.orchestrator import compile_graph
 from audio.transcriber import load_whisper
 from audio.vad import load_vad
@@ -29,12 +28,9 @@ async def lifespan(app: FastAPI):
     setup_logging(settings.app_env)
     logger.info("Starting InterviewSense...")
 
-    
-
-    # Database
-    init_db_path()
-    async with await get_db() as db:
-        await create_tables(db)
+    # Database — creates engine, session factory, and all tables via
+    # Base.metadata.create_all. Safe to call on every startup.
+    await init_db()
     logger.info("Database ready.")
 
     # Audio models — loaded once, reused across all sessions

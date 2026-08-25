@@ -27,6 +27,7 @@ python-dotenv==1.2.2
 
 # Database
 aiosqlite==0.22.1
+sqlalchemy[asyncio]>=2.0
 
 # Audio — STT
 groq==1.6.0

@@ -1,5 +1,7 @@
-import json
-import aiosqlite
+from sqlalchemy import select, update, delete, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import Session, Turn, Report
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -7,178 +9,205 @@ logger = get_logger(__name__)
 
 # --- Sessions ---
 
-async def insert_session(db: aiosqlite.Connection, session: dict) -> None:
-    await db.execute(
-        """
-        INSERT INTO sessions (
-            session_id, candidate_name, domain, difficulty,
-            question_count, jd_text, start_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            session["session_id"],
-            session.get("candidate_name"),
-            session["domain"],
-            session["difficulty"],
-            session["question_count"],
-            session.get("jd_text"),
-            session["start_time"],
-        ),
-    )
-    await db.commit()
+async def insert_session(db: AsyncSession, session: dict) -> None:
+    db.add(Session(
+        session_id=session["session_id"],
+        candidate_name=session.get("candidate_name"),
+        domain=session["domain"],
+        difficulty=session["difficulty"],
+        question_count=session["question_count"],
+        jd_text=session.get("jd_text"),
+        start_time=session["start_time"],
+    ))
+    await db.flush()
     logger.debug(f"Session inserted: {session['session_id']}")
 
 
 async def update_session_end(
-    db: aiosqlite.Connection,
+    db: AsyncSession,
     session_id: str,
     end_time: str,
     composite_score: float,
 ) -> None:
     await db.execute(
-        """
-        UPDATE sessions
-        SET end_time = ?, composite_score = ?
-        WHERE session_id = ?
-        """,
-        (end_time, composite_score, session_id),
+        update(Session)
+        .where(Session.session_id == session_id)
+        .values(end_time=end_time, composite_score=composite_score)
     )
-    await db.commit()
 
 
-async def get_all_sessions(db: aiosqlite.Connection) -> list[dict]:
-    async with db.execute(
-        "SELECT * FROM sessions ORDER BY start_time DESC"
-    ) as cursor:
-        rows = await cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in rows]
+async def get_all_sessions(db: AsyncSession) -> list[dict]:
+    result = await db.execute(
+        select(Session).order_by(Session.start_time.desc())
+    )
+    sessions = result.scalars().all()
+    return [_session_to_dict(s) for s in sessions]
 
 
 async def get_session_by_id(
-    db: aiosqlite.Connection, session_id: str
+    db: AsyncSession, session_id: str
 ) -> dict | None:
-    async with db.execute(
-        "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
-    ) as cursor:
-        row = await cursor.fetchone()
-        if row is None:
-            return None
-        columns = [desc[0] for desc in cursor.description]
-        return dict(zip(columns, row))
+    result = await db.execute(
+        select(Session).where(Session.session_id == session_id)
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        return None
+    return _session_to_dict(session)
 
 
-async def delete_session(db: aiosqlite.Connection, session_id: str) -> bool:
+async def delete_session(db: AsyncSession, session_id: str) -> bool:
     """
     Deletes a session and all associated turns and reports.
+    Cascade handled by SQLAlchemy relationship(cascade='all, delete-orphan')
+    defined in models.py — no manual child deletion needed.
     Returns True if a session was deleted, False if not found.
     """
-    await db.execute("DELETE FROM turns WHERE session_id = ?", (session_id,))
-    await db.execute("DELETE FROM reports WHERE session_id = ?", (session_id,))
-    cursor = await db.execute(
-        "DELETE FROM sessions WHERE session_id = ?", (session_id,)
+    result = await db.execute(
+        delete(Session).where(Session.session_id == session_id)
     )
-    await db.commit()
-    deleted = cursor.rowcount > 0
+    deleted = result.rowcount > 0
     if deleted:
         logger.debug(f"Session deleted: {session_id}")
     return deleted
 
 
-async def delete_all_sessions(db: aiosqlite.Connection) -> int:
+async def delete_all_sessions(db: AsyncSession) -> int:
     """
     Deletes all sessions, turns, and reports.
     Returns count of sessions deleted.
     """
-    await db.execute("DELETE FROM turns")
-    await db.execute("DELETE FROM reports")
-    cursor = await db.execute("DELETE FROM sessions")
-    await db.commit()
-    count = cursor.rowcount
+    # Get count before deletion
+    count_result = await db.execute(select(func.count()).select_from(Session))
+    count = count_result.scalar() or 0
+
+    # Cascade in models handles turns and reports automatically
+    await db.execute(delete(Turn))
+    await db.execute(delete(Report))
+    await db.execute(delete(Session))
+
     logger.debug(f"All sessions deleted: {count} removed")
     return count
 
 
 # --- Turns ---
 
-async def insert_turn(db: aiosqlite.Connection, turn: dict) -> None:
-    await db.execute(
-        """
-        INSERT INTO turns (
-            turn_id, session_id, question_text, answer_transcript,
-            correctness_score, speech_metrics, next_question_type, timestamp
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            turn["turn_id"],
-            turn["session_id"],
-            turn["question_text"],
-            turn.get("answer_transcript"),
-            turn.get("correctness_score"),
-            json.dumps(turn.get("speech_metrics", {})),
-            turn.get("next_question_type"),
-            turn["timestamp"],
-        ),
-    )
-    await db.commit()
+async def insert_turn(db: AsyncSession, turn: dict) -> None:
+    db.add(Turn(
+        turn_id=turn["turn_id"],
+        session_id=turn["session_id"],
+        question_text=turn["question_text"],
+        answer_transcript=turn.get("answer_transcript"),
+        correctness_score=turn.get("correctness_score"),
+        speech_metrics=turn.get("speech_metrics", {}),
+        # JSON column — SQLAlchemy serializes dict automatically. No json.dumps needed.
+        next_question_type=turn.get("next_question_type"),
+        timestamp=turn["timestamp"],
+        skipped=turn.get("skipped"),
+    ))
+    await db.flush()
     logger.debug(f"Turn inserted: {turn['turn_id']}")
 
 
 async def get_turns_by_session(
-    db: aiosqlite.Connection, session_id: str
+    db: AsyncSession, session_id: str
 ) -> list[dict]:
-    async with db.execute(
-        "SELECT * FROM turns WHERE session_id = ? ORDER BY timestamp ASC",
-        (session_id,),
-    ) as cursor:
-        rows = await cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        turns = []
-        for row in rows:
-            t = dict(zip(columns, row))
-            t["speech_metrics"] = json.loads(t["speech_metrics"] or "{}")
-            turns.append(t)
-        return turns
+    result = await db.execute(
+        select(Turn)
+        .where(Turn.session_id == session_id)
+        .order_by(Turn.timestamp.asc())
+    )
+    turns = result.scalars().all()
+    return [_turn_to_dict(t) for t in turns]
 
 
 # --- Reports ---
 
-async def insert_report(db: aiosqlite.Connection, report: dict) -> None:
-    await db.execute(
-        """
-        INSERT OR IGNORE INTO reports (
-            report_id, session_id, technical_score, communication_score,
-            pacing_score, composite_score, weak_topics,
-            improvement_plan_text, langsmith_trace_url, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            report["report_id"],
-            report["session_id"],
-            report.get("technical_score"),
-            report.get("communication_score"),
-            report.get("pacing_score"),
-            report.get("composite_score"),
-            json.dumps(report.get("weak_topics", [])),
-            report.get("improvement_plan_text"),
-            report.get("langsmith_trace_url"),
-            report["created_at"],
-        ),
+async def insert_report(db: AsyncSession, report: dict) -> None:
+    # INSERT OR IGNORE equivalent — skip if report for this session already exists.
+    # Prevents duplicate report inserts when _finalize_session is called twice
+    # (e.g. end_interview message arrives while last turn is still processing).
+    existing = await db.execute(
+        select(Report).where(Report.session_id == report["session_id"])
     )
-    await db.commit()
+    if existing.scalar_one_or_none() is not None:
+        logger.debug(f"Report already exists for session: {report['session_id']} — skipping insert")
+        return
+
+    db.add(Report(
+        report_id=report["report_id"],
+        session_id=report["session_id"],
+        technical_score=report.get("technical_score"),
+        communication_score=report.get("communication_score"),
+        pacing_score=report.get("pacing_score"),
+        composite_score=report.get("composite_score"),
+        weak_topics=report.get("weak_topics", []),
+        # JSON column — SQLAlchemy serializes list automatically. No json.dumps needed.
+        improvement_plan_text=report.get("improvement_plan_text"),
+        langsmith_trace_url=report.get("langsmith_trace_url"),
+        created_at=report["created_at"],
+    ))
+    await db.flush()
     logger.debug(f"Report inserted: {report['report_id']}")
 
 
 async def get_report_by_session(
-    db: aiosqlite.Connection, session_id: str
+    db: AsyncSession, session_id: str
 ) -> dict | None:
-    async with db.execute(
-        "SELECT * FROM reports WHERE session_id = ?", (session_id,)
-    ) as cursor:
-        row = await cursor.fetchone()
-        if row is None:
-            return None
-        columns = [desc[0] for desc in cursor.description]
-        r = dict(zip(columns, row))
-        r["weak_topics"] = json.loads(r["weak_topics"] or "[]")
-        return r
+    result = await db.execute(
+        select(Report).where(Report.session_id == session_id)
+    )
+    report = result.scalar_one_or_none()
+    if report is None:
+        return None
+    return _report_to_dict(report)
+
+
+# --- ORM → dict helpers ---
+# Callers (routes.py, websocket.py) work with plain dicts — not ORM objects.
+# These helpers keep the return type identical to the old aiosqlite queries
+# so no caller needs to change.
+
+def _session_to_dict(s: Session) -> dict:
+    return {
+        "session_id": s.session_id,
+        "candidate_name": s.candidate_name,
+        "domain": s.domain,
+        "difficulty": s.difficulty,
+        "question_count": s.question_count,
+        "jd_text": s.jd_text,
+        "start_time": s.start_time,
+        "end_time": s.end_time,
+        "composite_score": s.composite_score,
+    }
+
+
+def _turn_to_dict(t: Turn) -> dict:
+    return {
+        "turn_id": t.turn_id,
+        "session_id": t.session_id,
+        "question_text": t.question_text,
+        "answer_transcript": t.answer_transcript,
+        "correctness_score": t.correctness_score,
+        "speech_metrics": t.speech_metrics or {},
+        # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
+        "next_question_type": t.next_question_type,
+        "timestamp": t.timestamp,
+        "skipped": t.skipped,
+    }
+
+
+def _report_to_dict(r: Report) -> dict:
+    return {
+        "report_id": r.report_id,
+        "session_id": r.session_id,
+        "technical_score": r.technical_score,
+        "communication_score": r.communication_score,
+        "pacing_score": r.pacing_score,
+        "composite_score": r.composite_score,
+        "weak_topics": r.weak_topics or [],
+        # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
+        "improvement_plan_text": r.improvement_plan_text,
+        "langsmith_trace_url": r.langsmith_trace_url,
+        "created_at": r.created_at,
+    }
