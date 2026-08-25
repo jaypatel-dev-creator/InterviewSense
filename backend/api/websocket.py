@@ -204,7 +204,7 @@ async def handle_interview_websocket(
                     )
 
                 elif data.get("type") == "end_interview":
-                    await _finalize_session(websocket, state, session_id)
+                    await _finalize_session(websocket, state, session_id, graph)
                     return  # socket closed by frontend after report_ready — stop receiving
 
                 elif data.get("type") == "repeat_question":
@@ -245,7 +245,7 @@ async def handle_interview_websocket(
 
                     state["current_question_number"] += 1
                     if state["current_question_number"] > question_count:
-                        await _finalize_session(websocket, state, session_id)
+                        await _finalize_session(websocket, state, session_id, graph)
                         break
                     # Generate next question directly via LLM — do NOT run the
                     # full graph here. The graph runs evaluator-router which
@@ -375,7 +375,7 @@ async def _process_answer(
         })
 
     if state.get("interview_complete"):
-        await _finalize_session(websocket, state, session_id)
+        await _finalize_session(websocket, state, session_id, graph)
     else:
         await websocket.send_json({
             "type": "question",
@@ -394,6 +394,7 @@ async def _finalize_session(
     websocket: WebSocket,
     state: SessionState,
     session_id: str,
+    graph,
 ):
     logger.info(f"Finalizing session: {session_id}")
 
@@ -425,7 +426,7 @@ async def _finalize_session(
         logger.info(f"Empty report sent for session: {session_id}")
         return
 
-    result = await build_graph().ainvoke({**state, "interview_complete": True})
+    result = await graph.ainvoke({**state, "interview_complete": True})
     improvement_plan = result.get("improvement_plan_text", "") or "No improvement plan was generated for this session."
 
     turns = state["turns"]
