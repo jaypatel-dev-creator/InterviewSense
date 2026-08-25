@@ -11,8 +11,7 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str
     # No default — Rachel (21m00Tcm4TlvDq8ikWAM) is a library voice and
     # is blocked on the ElevenLabs free tier. Set ELEVENLABS_VOICE_ID in
-    # .env to your custom Voice Design voice ID. App will fail fast at
-    # startup if this is missing rather than silently 401-ing on TTS calls.
+    # .env to your custom Voice Design voice ID. 
     elevenlabs_voice_id: str
 
     # App

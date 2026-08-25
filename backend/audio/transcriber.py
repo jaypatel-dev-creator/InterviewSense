@@ -4,6 +4,7 @@ import soundfile as sf
 from groq import Groq
 from core.config import get_settings
 from core.logging import get_logger
+from core.exceptions import TranscriptionException
 
 logger = get_logger(__name__)
 
@@ -53,6 +54,10 @@ def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
     returns in ~1-2 seconds. Swap this file only to enable true
     word-by-word streaming via Deepgram Nova-3.
 
+    Raises:
+        TranscriptionException: if the Groq API call fails. Caller
+        (websocket.py) catches this and sends a typed error to the frontend.
+
     Returns:
         {
             "text": str,
@@ -74,7 +79,7 @@ def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
         )
     except Exception as e:
         logger.error(f"Groq transcription failed: {e}")
-        return {"text": "", "words": [], "language": "en"}
+        raise TranscriptionException(f"Groq STT failed: {str(e)}")
 
     full_text = response.text.strip() if response.text else ""
 

@@ -23,15 +23,6 @@ class SessionNotFoundException(InterviewSenseException):
         )
 
 
-class SessionServiceException(InterviewSenseException):
-    pass
-
-
-class AudioProcessingException(InterviewSenseException):
-    def __init__(self, message: str = "Audio processing failed."):
-        super().__init__(message=message, status_code=500)
-
-
 class TranscriptionException(InterviewSenseException):
     def __init__(self, message: str = "Transcription failed."):
         super().__init__(message=message, status_code=500)
@@ -47,14 +38,6 @@ class ReportNotFoundException(InterviewSenseException):
         super().__init__(
             message=f"Report for session '{session_id}' not found.",
             status_code=404,
-        )
-
-
-class InvalidDomainException(InterviewSenseException):
-    def __init__(self, domain: str):
-        super().__init__(
-            message=f"Invalid interview domain '{domain}'.",
-            status_code=400,
         )
 
 

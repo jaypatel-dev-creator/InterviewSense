@@ -10,9 +10,10 @@ from db.database import get_db
 from db.queries import insert_turn, update_session_end, insert_report
 from prompts.evaluator_router import build_first_question_prompt
 from prompts.jd_extractor import build_jd_extractor_prompt
-from domains.topics import SEED_TOPICS
+from domains.topics import SEED_TOPICS, Domain, Difficulty
 from agents.llm import get_llm
 from core.logging import get_logger
+from core.exceptions import TranscriptionException, AgentException
 
 logger = get_logger(__name__)
 
@@ -55,6 +56,7 @@ async def extract_jd_skills(jd_text: str) -> list[str]:
         skills = json.loads(content.strip())
         return skills if isinstance(skills, list) else []
     except Exception as e:
+        # JD extraction failure is non-fatal — session continues without JD grounding
         logger.warning(f"JD skill extraction failed: {e}", exc_info=True)
         return []
 
@@ -79,6 +81,7 @@ async def generate_first_question(
         logger.info(f"First question generated: {question[:80]}")
         return question
     except Exception as e:
+        # First question generation failure degrades the entire session — log as error
         logger.error(f"First question generation failed: {e}", exc_info=True)
         return f"Tell me about your experience with {domain.replace('_', ' ')}."
 
@@ -126,6 +129,22 @@ async def handle_interview_websocket(
     jd_text: str | None,
     candidate_name: str | None,
 ):
+    # --- Validate domain and difficulty before accepting the connection ---
+    # Reject with close code 1008 (policy violation) so the frontend gets a
+    # clear signal rather than silently running a session with bad seed topics.
+    valid_domains = {d.value for d in Domain}
+    valid_difficulties = {d.value for d in Difficulty}
+
+    if domain not in valid_domains:
+        logger.warning(f"Invalid domain rejected at WebSocket connect: '{domain}'")
+        await websocket.close(code=1008, reason=f"Invalid domain: '{domain}'")
+        return
+
+    if difficulty not in valid_difficulties:
+        logger.warning(f"Invalid difficulty rejected at WebSocket connect: '{difficulty}'")
+        await websocket.close(code=1008, reason=f"Invalid difficulty: '{difficulty}'")
+        return
+
     await websocket.accept()
     logger.info(f"WebSocket connected — session: {session_id}")
 
@@ -271,16 +290,44 @@ async def handle_interview_websocket(
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected — session: {session_id}")
-    except RuntimeError as e:
-        if "disconnect message has been received" in str(e):
-            # Frontend closed the socket after receiving report_ready — expected, not an error
-            logger.info(f"Session complete, socket closed by client — session: {session_id}")
-        else:
-            logger.error(f"WebSocket runtime error — session {session_id}: {e}", exc_info=True)
-    except Exception as e:
-        logger.error(f"WebSocket error — session {session_id}: {e}", exc_info=True)
+
+    except TranscriptionException as e:
+        # Groq STT failed — session cannot continue without a transcript.
+        # Notify the frontend with a typed error code so the UI can show
+        # a specific message ("Speech recognition failed, please try again")
+        # rather than a generic crash screen.
+        logger.error(f"Transcription failed — session {session_id}: {e.message}")
         try:
-            await websocket.send_json({"type": "error", "message": str(e)})
+            await websocket.send_json({
+                "type": "error",
+                "error_code": "TRANSCRIPTION_FAILED",
+                "message": e.message,
+            })
+        except Exception:
+            pass
+
+    except AgentException as e:
+        # LLM agent call failed (evaluator-router or report-generator).
+        # Frontend can surface "Evaluation failed, please retry" specifically.
+        logger.error(f"Agent failed — session {session_id}: {e.message}")
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "error_code": "AGENT_FAILED",
+                "message": e.message,
+            })
+        except Exception:
+            pass
+
+    except Exception as e:
+        # Catch-all for anything genuinely unexpected — log with full traceback.
+        logger.error(f"Unhandled WebSocket error — session {session_id}: {e}", exc_info=True)
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "error_code": "INTERNAL_ERROR",
+                "message": "An unexpected error occurred.",
+            })
         except Exception:
             pass
 

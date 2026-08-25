@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
 class SpeechMetrics(BaseModel):
@@ -19,9 +18,9 @@ class TurnResponse(BaseModel):
     turn_id: str
     session_id: str
     question_text: str
-    answer_transcript: Optional[str]
-    correctness_score: Optional[float]
-    speech_metrics: Optional[SpeechMetrics]
-    next_question_type: Optional[str]
+    answer_transcript: str | None
+    correctness_score: float | None
+    speech_metrics: SpeechMetrics | None
+    next_question_type: str | None
     timestamp: str
-    skipped: Optional[bool] = None  # True when question was skipped — no answer, no evaluation
+    skipped: bool | None = None  # True when question was skipped — no answer, no evaluation

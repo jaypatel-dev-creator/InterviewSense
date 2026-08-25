@@ -16,7 +16,7 @@ from db.queries import (
     delete_session,
     delete_all_sessions,
 )
-from core.exceptions import SessionNotFoundException, ReportNotFoundException
+from core.exceptions import SessionNotFoundException, ReportNotFoundException, TTSException
 from core.config import get_settings
 from core.logging import get_logger
 
@@ -117,22 +117,26 @@ async def text_to_speech(payload: dict):
     from elevenlabs.client import AsyncElevenLabs
     settings = get_settings()
 
-    client = AsyncElevenLabs(api_key=settings.elevenlabs_api_key)
+    try:
+        client = AsyncElevenLabs(api_key=settings.elevenlabs_api_key)
 
-    audio_bytes = b""
-    async for chunk in client.text_to_speech.convert(
-        text=payload.get("text", ""),
-        voice_id=settings.elevenlabs_voice_id,
-        model_id="eleven_flash_v2_5",
-        output_format="mp3_44100_128",
-    ):
-        audio_bytes += chunk
+        audio_bytes = b""
+        async for chunk in client.text_to_speech.convert(
+            text=payload.get("text", ""),
+            voice_id=settings.elevenlabs_voice_id,
+            model_id="eleven_flash_v2_5",
+            output_format="mp3_44100_128",
+        ):
+            audio_bytes += chunk
 
-    return Response(
-        content=audio_bytes,
-        media_type="audio/mpeg",
-        headers={"Content-Disposition": "inline"},
-    )
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "inline"},
+        )
+    except Exception as e:
+        logger.error(f"ElevenLabs TTS failed: {e}", exc_info=True)
+        raise TTSException(f"ElevenLabs TTS failed: {str(e)}")
 
 
 # --- Health ---
