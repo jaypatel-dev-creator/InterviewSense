@@ -16,6 +16,7 @@ from api.websocket import handle_interview_websocket
 from db.database import init_db
 from agents.orchestrator import compile_graph
 from audio.transcriber import load_whisper
+from services.elevenlabs import load_elevenlabs
 
 logger = get_logger(__name__)
 
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
     # VAD is handled in the browser via useAudioRecorder.js (silence detection
     # before sending audio chunks). No server-side VAD model needed.
     load_whisper()
+    load_elevenlabs()
     logger.info("Audio models loaded.")
 
     # LangGraph agent graph
@@ -62,7 +64,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -1,5 +1,4 @@
 import uuid
-import httpx
 from datetime import datetime, timezone
 from fastapi import APIRouter
 from fastapi.responses import Response
@@ -19,6 +18,7 @@ from db.queries import (
 from core.exceptions import SessionNotFoundException, ReportNotFoundException, TTSException
 from core.config import get_settings
 from core.logging import get_logger
+from services.elevenlabs import get_elevenlabs_client
 
 logger = get_logger(__name__)
 
@@ -90,7 +90,7 @@ async def get_turns(session_id: str):
         turns = await get_turns_by_session(db, session_id)
     return [
         TurnResponse(
-            **{**t, "speech_metrics": SpeechMetrics(**t["speech_metrics"])}
+            **{**t, "speech_metrics": SpeechMetrics(**(t["speech_metrics"] or {}))}
         )
         for t in turns
     ]
@@ -114,12 +114,10 @@ async def get_report(session_id: str):
 
 @router.post("/tts")
 async def text_to_speech(payload: dict):
-    from elevenlabs.client import AsyncElevenLabs
     settings = get_settings()
+    client = get_elevenlabs_client()
 
     try:
-        client = AsyncElevenLabs(api_key=settings.elevenlabs_api_key)
-
         audio_bytes = b""
         async for chunk in client.text_to_speech.convert(
             text=payload.get("text", ""),

@@ -11,11 +11,24 @@ from agents.report_generator import report_generator_node
 
 logger = get_logger(__name__)
 
-_initialized: bool = False
+_graph = None
 
 
 def compile_graph() -> None:
-    global _initialized
+    """
+    Initializes the LLM singleton and compiles the LangGraph StateGraph.
+    Called once at application startup in main.py lifespan.
+
+    Stores the compiled graph as a module-level singleton — the graph is
+    stateless (same nodes, edges, routing logic every invocation) so it
+    is safe to compile once and reuse across all WebSocket sessions.
+
+    Previously compile_graph() only initialized the LLM and build_graph()
+    was called per-connection. Consolidated here to follow the same singleton
+    pattern as _groq_client, _llm, _engine, and _elevenlabs_client.
+    """
+    global _graph
+
     settings = get_settings()
 
     llm = ChatGoogleGenerativeAI(
@@ -24,20 +37,6 @@ def compile_graph() -> None:
         temperature=0.7,
     )
     set_llm(llm)
-
-    _initialized = True
-    logger.info("InterviewSense agent graph compiled.")
-
-
-def should_generate_report(state: SessionState) -> str:
-    if state.get("interview_complete", False):
-        return "report_generator"
-    return "evaluator_router"
-
-
-def build_graph():
-    if not _initialized:
-        raise AgentException("Graph not initialized. Call compile_graph() on startup.")
 
     graph = StateGraph(SessionState)
 
@@ -59,4 +58,17 @@ def build_graph():
     graph.add_edge("evaluator_router", END)
     graph.add_edge("report_generator", END)
 
-    return graph.compile()
+    _graph = graph.compile()
+    logger.info("InterviewSense agent graph compiled.")
+
+
+def get_graph():
+    if _graph is None:
+        raise AgentException("Graph not initialized. Call compile_graph() on startup.")
+    return _graph
+
+
+def should_generate_report(state: SessionState) -> str:
+    if state.get("interview_complete", False):
+        return "report_generator"
+    return "evaluator_router"

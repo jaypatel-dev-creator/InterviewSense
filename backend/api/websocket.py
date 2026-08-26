@@ -3,7 +3,7 @@ import json
 import numpy as np
 from datetime import datetime, timezone
 from fastapi import WebSocket, WebSocketDisconnect
-from agents.orchestrator import build_graph
+from agents.orchestrator import get_graph
 from agents.state import SessionState
 from audio.processor import process_audio_chunk
 from db.database import get_db
@@ -149,7 +149,7 @@ async def handle_interview_websocket(
     logger.info(f"WebSocket connected — session: {session_id}")
 
     try:
-        graph = build_graph()
+        graph = get_graph()
 
         jd_skills = await extract_jd_skills(jd_text or "")
         logger.info(f"JD skills extracted: {jd_skills}")

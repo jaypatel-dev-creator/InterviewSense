@@ -44,7 +44,9 @@ def extract_speech_features(
     pitch_variation = _compute_pitch_variation(audio, sample_rate)
     energy_level = _compute_energy_level(audio)
     silence_ratio = _compute_silence_ratio(audio, sample_rate)
-    confidence_proxy = _compute_confidence_proxy(words) if words else 0.0
+    # confidence_proxy removed — Groq hardcodes word probabilities to 1.0,
+    # making the metric always 1.0 and meaningless. energy_level (RMS) is
+    # used as the vocal delivery proxy throughout the scoring pipeline.
 
     metrics = {
         "wpm": round(wpm, 2),
@@ -54,7 +56,6 @@ def extract_speech_features(
         "pitch_variation": round(pitch_variation, 4),
         "energy_level": round(energy_level, 4),
         "silence_ratio": round(silence_ratio, 4),
-        "confidence_proxy": round(confidence_proxy, 4),
     }
 
     logger.debug(f"Speech features extracted: {metrics}")
@@ -136,14 +137,3 @@ def _compute_silence_ratio(audio: np.ndarray, sample_rate: int) -> float:
     except Exception as e:
         logger.warning(f"Silence ratio extraction failed: {e}")
         return 0.0
-
-
-def _compute_confidence_proxy(words: list[dict]) -> float:
-    """
-    Average word probability from Whisper — proxy for speech clarity.
-    Higher = clearer pronunciation and more confident delivery.
-    """
-    if not words:
-        return 0.0
-    probs = [w.get("probability", 0.0) for w in words]
-    return float(np.mean(probs))

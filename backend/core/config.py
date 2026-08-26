@@ -11,11 +11,15 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str
     # No default — Rachel (21m00Tcm4TlvDq8ikWAM) is a library voice and
     # is blocked on the ElevenLabs free tier. Set ELEVENLABS_VOICE_ID in
-    # .env to your custom Voice Design voice ID. 
+    # .env to your custom Voice Design voice ID. App will fail fast at
+    # startup if this is missing rather than silently 401-ing on TTS calls.
     elevenlabs_voice_id: str
 
     # App
     app_env: str = "development"
+    allowed_origins: list[str] = ["http://localhost:5173"]
+    # Override via ALLOWED_ORIGINS env var for deployment:
+    # ALLOWED_ORIGINS='["https://yourdomain.com"]'
 
     # Database
     sqlite_db_path: str = "./data/sessions/interviewsense.db"
