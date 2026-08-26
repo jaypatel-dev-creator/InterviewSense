@@ -108,6 +108,7 @@ async def insert_turn(db: AsyncSession, turn: dict) -> None:
         speech_metrics=turn.get("speech_metrics", {}),
         # JSON column — SQLAlchemy serializes dict automatically. No json.dumps needed.
         next_question_type=turn.get("next_question_type"),
+        jd_skill_targeted=turn.get("jd_skill_targeted"),
         timestamp=turn["timestamp"],
         skipped=turn.get("skipped"),
     ))
@@ -149,6 +150,7 @@ async def insert_report(db: AsyncSession, report: dict) -> None:
         composite_score=report.get("composite_score"),
         weak_topics=report.get("weak_topics", []),
         # JSON column — SQLAlchemy serializes list automatically. No json.dumps needed.
+        jd_coverage=report.get("jd_coverage"),
         improvement_plan_text=report.get("improvement_plan_text"),
         langsmith_trace_url=report.get("langsmith_trace_url"),
         created_at=report["created_at"],
@@ -198,6 +200,7 @@ def _turn_to_dict(t: Turn) -> dict:
         "speech_metrics": t.speech_metrics or {},
         # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
         "next_question_type": t.next_question_type,
+        "jd_skill_targeted": t.jd_skill_targeted,
         "timestamp": t.timestamp,
         "skipped": t.skipped,
     }
@@ -213,6 +216,7 @@ def _report_to_dict(r: Report) -> dict:
         "composite_score": r.composite_score,
         "weak_topics": r.weak_topics or [],
         # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
+        "jd_coverage": r.jd_coverage,
         "improvement_plan_text": r.improvement_plan_text,
         "langsmith_trace_url": r.langsmith_trace_url,
         "created_at": r.created_at,

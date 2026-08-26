@@ -15,6 +15,16 @@ class EvaluatorRouterOutput(BaseModel):
         description="What the candidate got right or explained well"
     )
 
+    # JD traceability — which JD skill this question targeted
+    jd_skill_targeted: str | None = Field(
+        default=None,
+        description=(
+            "The specific JD skill this question was designed to test. "
+            "Must be one of the provided JD skills exactly as given, or null "
+            "if no JD was provided or no skill maps to this question."
+        )
+    )
+
     # Routing
     next_question_type: Literal[
         "new_topic",

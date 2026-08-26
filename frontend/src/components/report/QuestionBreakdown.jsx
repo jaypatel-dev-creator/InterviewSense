@@ -45,7 +45,22 @@ export default function QuestionBreakdown({ turns }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 flex-1">
-                  <span className="text-xs font-mono" style={{ color: '#64748b' }}>Q{i + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono" style={{ color: '#64748b' }}>Q{i + 1}</span>
+                    {/* JD skill badge — only shown when this question targeted a JD skill */}
+                    {turn.jd_skill_targeted && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded"
+                        style={{
+                          backgroundColor: 'rgba(59,130,246,0.1)',
+                          border: '1px solid rgba(59,130,246,0.3)',
+                          color: '#93c5fd',
+                        }}
+                      >
+                        {turn.jd_skill_targeted}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm font-medium" style={{ color: '#f1f5f9' }}>
                     {turn.question_text}
                   </p>

@@ -52,6 +52,8 @@ class Turn(Base):
     # JSON column — SQLAlchemy handles serialization automatically.
     # No more manual json.dumps/json.loads in queries.py.
     next_question_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    jd_skill_targeted: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Which JD skill this question was designed to test — null if no JD provided
     timestamp: Mapped[str] = mapped_column(String, nullable=False)
     skipped: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
@@ -71,6 +73,8 @@ class Report(Base):
     composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     weak_topics: Mapped[list | None] = mapped_column(JSON, nullable=True)
     # JSON column — stored as a JSON array, returned as a Python list automatically.
+    jd_coverage: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # JSON column — {"tested": [...], "not_tested": [...], "coverage_pct": float}
     improvement_plan_text: Mapped[str | None] = mapped_column(String, nullable=True)
     langsmith_trace_url: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)

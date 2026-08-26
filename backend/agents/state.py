@@ -13,6 +13,7 @@ class Turn(TypedDict, total=False):
     strengths: list[str]
     next_question_type: str
     difficulty_adjustment: str
+    jd_skill_targeted: str | None  # JD skill this question was designed to test
     speech_metrics: dict
     timestamp: str
     skipped: bool  # True when question was skipped — no answer, no evaluation

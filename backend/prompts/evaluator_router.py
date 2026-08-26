@@ -22,7 +22,11 @@ def build_evaluator_router_prompt(
 The candidate is preparing for a specific role. Target these skills from the job description:
 {", ".join(jd_skills)}
 Prioritize questions that test these skills when selecting new topics.
+When generating the next question, set jd_skill_targeted to the exact JD skill it tests.
+If the next question does not map to any JD skill, set jd_skill_targeted to null.
 """
+    else:
+        jd_context = "\nNo JD provided — set jd_skill_targeted to null.\n"
 
     topics_str = ", ".join(topics_covered) if topics_covered else "none yet"
 
@@ -39,22 +43,24 @@ CANDIDATE'S ANSWER:
 
 TOPICS COVERED SO FAR: {topics_str}
 {jd_context}
-
 YOUR TASK:
 1. Evaluate the candidate's answer objectively against the question asked.
 2. Assign a correctness score from 0.0 to 10.0.
 3. List specific concepts the candidate missed or got wrong.
 4. List what the candidate explained correctly or well.
-5. Decide the next question type:
+5. Identify which JD skill the CURRENT question was testing (jd_skill_targeted) — must match one of the provided JD skills exactly, or null if none applies.
+6. Decide the next question type:
    - "follow_up" — candidate answered well, explore the same topic deeper
    - "drill_down" — candidate was vague or partially correct, probe further
    - "reframe" — candidate completely misunderstood, approach the concept differently
    - "new_topic" — candidate answered well enough, move to a new topic
-6. Generate the exact next question text.
-7. Decide difficulty adjustment for the next question.
+7. Generate the exact next question text.
+8. Decide difficulty adjustment for the next question.
 
 Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.
 """
+
+
 def build_first_question_prompt(
     domain: str,
     difficulty: str,

@@ -411,6 +411,7 @@ async def _finalize_session(
             "pacing_score": None,
             "composite_score": 0.0,
             "weak_topics": [],
+            "jd_coverage": None,
             "improvement_plan_text": "No questions were answered in this session.",
             "langsmith_trace_url": "",
             "created_at": utcnow_iso(),
@@ -487,6 +488,25 @@ async def _finalize_session(
     else:
         composite = round(avg_technical, 2)
 
+    # JD coverage — which JD skills were tested vs not tested.
+    # Only computed when JD skills were provided for the session.
+    # jd_skill_targeted is set per-turn by the evaluator-router node.
+    jd_skills = state.get("jd_skills", [])
+    if jd_skills:
+        tested_skills = list({
+            t.get("jd_skill_targeted")
+            for t in turns
+            if t.get("jd_skill_targeted")
+        })
+        not_tested_skills = [s for s in jd_skills if s not in tested_skills]
+        jd_coverage = {
+            "tested": tested_skills,
+            "not_tested": not_tested_skills,
+            "coverage_pct": round(len(tested_skills) / len(jd_skills) * 100, 1),
+        }
+    else:
+        jd_coverage = None
+
     report_id = str(uuid.uuid4())
     report = {
         "report_id": report_id,
@@ -500,6 +520,7 @@ async def _finalize_session(
             for t in turns
             for concept in t.get("missing_concepts", [])
         }),
+        "jd_coverage": jd_coverage,
         "improvement_plan_text": improvement_plan,
         "langsmith_trace_url": "",
         "created_at": utcnow_iso(),

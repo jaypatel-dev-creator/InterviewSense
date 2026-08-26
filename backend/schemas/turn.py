@@ -22,5 +22,6 @@ class TurnResponse(BaseModel):
     correctness_score: float | None
     speech_metrics: SpeechMetrics | None
     next_question_type: str | None
+    jd_skill_targeted: str | None = None  # JD skill this question was designed to test
     timestamp: str
     skipped: bool | None = None  # True when question was skipped — no answer, no evaluation
