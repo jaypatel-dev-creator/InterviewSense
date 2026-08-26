@@ -77,7 +77,7 @@ isAISpeaking, isProcessing, error
 | `question` | `setQuestion()` → `speakText()` via ElevenLabs TTS |
 | `transcript_update` | `updateLiveTranscript()` — live display |
 | `report_ready` | Atomic store update → navigate to report screen |
-| `error` | `setError()` — surface to UI |
+| `error` | `setError()` — typed error codes: `TRANSCRIPTION_FAILED`, `AGENT_FAILED`, `INTERNAL_ERROR` |
 
 ---
 
@@ -125,10 +125,10 @@ src/
 │   │   ├── DomainSelector.jsx    # Step 1 — domain picker
 │   │   └── JDPaste.jsx           # Step 3 — JD textarea
 │   ├── report/
-│   │   ├── ReportScreen.jsx      # Report layout container
+│   │   ├── ReportScreen.jsx      # Report layout — scores, JD coverage, improvement plan, breakdown
 │   │   ├── ScoreCard.jsx         # Overall + per-metric scores
 │   │   ├── ImprovementPlan.jsx   # Improvement plan paragraphs
-│   │   └── QuestionBreakdown.jsx # Per-question scores, strengths, missed
+│   │   └── QuestionBreakdown.jsx # Per-question scores, strengths, missed, JD skill targeted
 │   ├── setup/
 │   │   └── SetupForm.jsx         # 3-step wizard (domain → configure → JD)
 │   └── history/

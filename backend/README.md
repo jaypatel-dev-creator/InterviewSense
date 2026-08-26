@@ -1,6 +1,6 @@
 # InterviewSense — Backend
 
-FastAPI + LangGraph backend for InterviewSense. Handles WebSocket session management, audio processing, LangGraph pipeline evaluation, and report generation.
+FastAPI + LangGraph backend for InterviewSense. Handles WebSocket session management, audio processing, LangGraph pipeline evaluation, JD skill traceability, and report generation.
 
 ---
 
@@ -19,19 +19,15 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 2. Install PyTorch (CPU-only — required before requirements.txt)
-
-```bash
-pip install torch==2.3.1+cpu torchaudio==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu
-```
-
-### 3. Install dependencies
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment
+> No PyTorch installation required. Voice activity detection runs browser-side — the backend has no server-side VAD model dependency.
+
+### 3. Configure environment
 
 ```bash
 cp .env.example .env
@@ -48,17 +44,18 @@ LANGCHAIN_API_KEY=your_langsmith_key       # optional
 LANGCHAIN_TRACING_V2=true                  # optional
 APP_ENV=development
 SQLITE_DB_PATH=./data/sessions/interviewsense.db
+ALLOWED_ORIGINS=["http://localhost:5173"]  # override for deployment
 ```
 
 > `ELEVENLABS_VOICE_ID` is required — the app will refuse to start without it. Library voices are blocked on the ElevenLabs free tier. Create a custom voice via Voice Design and copy its ID.
 
-### 5. Run
+### 4. Run
 
 ```bash
 uvicorn main:app --reload
 ```
 
-Backend starts at `http://localhost:8000`.
+Backend starts at `http://localhost:8000`. SQLite database is created automatically at `./data/sessions/interviewsense.db` on first startup via `Base.metadata.create_all`.
 
 ---
 
@@ -83,7 +80,14 @@ speech_analytics_node  ──── pure Python, no LLM
 Reads audio features already attached to state by the WebSocket handler after parallel Whisper + librosa processing. Validates and logs WPM, pauses, fillers. No LLM call — pure Python.
 
 **`evaluator_router_node`**
-Single Gemini call with structured Pydantic output (`EvaluatorRouterOutput`). Scores the candidate's answer (0–10), identifies strengths and missing concepts, and decides the next question type (`drill_down`, `follow_up`, `new_topic`, `reframe`, `wrap_up`). Merges evaluation and routing into one shot.
+Single Gemini call with structured Pydantic output (`EvaluatorRouterOutput`). In one shot:
+- Scores the candidate's answer (0–10)
+- Identifies strengths and missing concepts
+- Identifies which JD skill the current question was testing (`jd_skill_targeted`)
+- Decides the next question type (`drill_down`, `follow_up`, `new_topic`, `reframe`, `wrap_up`)
+- Generates the exact next question text, informed by a rolling conversation summary
+
+The conversation summary is a plain-text log of prior Q&A appended after each turn — no extra LLM call. It gives the evaluator context about how the candidate answered previous questions when generating the next one.
 
 **`evaluator_router_node` — next question types:**
 
@@ -105,8 +109,6 @@ Single Gemini call at session end. Receives full turn history, generates a struc
 ```
 Binary WebSocket frame (Float32Array)
     │
-    ├── Silero VAD          — detects speech end, triggers flush
-    │
     └── process_audio_chunk()  ─── ThreadPoolExecutor (parallel)
             ├── Groq Whisper v3 Turbo  — transcription + word timestamps
             └── librosa signal analysis
@@ -119,13 +121,15 @@ Binary WebSocket frame (Float32Array)
                     └── Answer duration — chunk length / sample rate
 ```
 
-Whisper and librosa run concurrently in a `ThreadPoolExecutor`. After both complete, word-derived metrics (WPM, pause count, filler count) are merged into the signal analysis result selectively — avoiding a second full librosa run.
+Whisper and librosa run concurrently in a `ThreadPoolExecutor`. Voice activity detection runs browser-side in `useAudioRecorder.js` — audio chunks are only sent when speech is detected.
 
 ---
 
 ## WebSocket Protocol
 
 **Connection:** `ws://localhost:8000/ws/interview/{session_id}?domain=&difficulty=&question_count=&jd_text=&candidate_name=`
+
+Domain and difficulty are validated before the connection is accepted — invalid values are rejected with close code `1008`.
 
 ### Client → Server
 
@@ -141,12 +145,10 @@ Whisper and librosa run concurrently in a `ThreadPoolExecutor`. After both compl
 
 | Message | Description |
 |---|---|
-| `{"type": "connected"}` | Session accepted |
 | `{"type": "question", "question": "...", "question_number": N, "question_count": N}` | New question |
-| `{"type": "transcript_update", "text": "...", "speech_metrics": {...}}` | Live transcript + metrics after each audio chunk |
+| `{"type": "transcript_update", "text": "...", "speech_metrics": {...}}` | Live transcript + metrics |
 | `{"type": "report_ready", "report": {...}, "turns": [...]}` | Session complete |
-| `{"type": "error", "message": "..."}` | Error during processing |
-| `{"type": "ping"}` | Keepalive (every 30s) |
+| `{"type": "error", "error_code": "...", "message": "..."}` | Typed error — `TRANSCRIPTION_FAILED`, `AGENT_FAILED`, `INTERNAL_ERROR` |
 
 ---
 
@@ -161,8 +163,8 @@ score = min(10.0, (energy_level / 0.10) * 10.0)
 
 # Pacing — WPM benchmarked against 120–160 wpm ideal
 if 120 <= wpm <= 160: score = 10.0
-elif wpm < 120: score = max(0, 10 - (120 - wpm) / 12)
-elif wpm > 160: score = max(0, 10 - (wpm - 160) / 20)
+elif wpm < 120: score = 2.0 + (wpm - 80) * (8.0 / 40)
+elif wpm > 160: score = 10.0 - (wpm - 160) * (8.0 / 60)
 
 # Composite — weights depend on available metrics
 # Full voice (≥ half questions with mic): 60/25/15
@@ -175,49 +177,35 @@ N/A threshold: fewer than `ceil(question_count / 2)` voice answers → Communica
 
 ---
 
+## JD Coverage
+
+When `jd_text` is provided at session start:
+
+1. JD skills are extracted via a Gemini call and stored in `SessionState.jd_skills`
+2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested
+3. Post-session, `_finalize_session` computes coverage:
+
+```python
+jd_coverage = {
+    "tested": [...],        # skills that appeared as jd_skill_targeted
+    "not_tested": [...],    # skills never targeted
+    "coverage_pct": 66.7,   # tested / total * 100
+}
+```
+
+Sessions without a JD set `jd_coverage` to `null` — the frontend renders nothing for that section.
+
+---
+
 ## Database Schema
 
-```sql
--- Sessions
-CREATE TABLE sessions (
-    session_id TEXT PRIMARY KEY,
-    domain TEXT NOT NULL,
-    difficulty TEXT NOT NULL,
-    question_count INTEGER NOT NULL,
-    candidate_name TEXT,
-    jd_text TEXT,
-    started_at TEXT NOT NULL,
-    ended_at TEXT,
-    composite_score REAL
-);
+SQLAlchemy async ORM with `Base.metadata.create_all` at startup. Tables are created automatically — no manual migration needed for local development.
 
--- Turns
-CREATE TABLE turns (
-    turn_id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL,
-    question_text TEXT NOT NULL,
-    answer_transcript TEXT,
-    correctness_score REAL,
-    speech_metrics TEXT,      -- JSON
-    next_question_type TEXT,
-    timestamp TEXT NOT NULL,
-    skipped INTEGER DEFAULT 0
-);
-
--- Reports
-CREATE TABLE reports (
-    report_id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL,
-    technical_score REAL,
-    communication_score REAL,
-    pacing_score REAL,
-    composite_score REAL,
-    weak_topics TEXT,         -- JSON array
-    improvement_plan_text TEXT,
-    langsmith_trace_url TEXT,
-    created_at TEXT NOT NULL
-);
-```
+| Table | Key columns |
+|---|---|
+| `sessions` | `session_id`, `domain`, `difficulty`, `question_count`, `candidate_name`, `jd_text`, `start_time`, `end_time`, `composite_score` |
+| `turns` | `turn_id`, `session_id`, `question_text`, `answer_transcript`, `correctness_score`, `speech_metrics` (JSON), `next_question_type`, `jd_skill_targeted`, `timestamp`, `skipped` |
+| `reports` | `report_id`, `session_id`, `technical_score`, `communication_score`, `pacing_score`, `composite_score`, `weak_topics` (JSON), `jd_coverage` (JSON), `improvement_plan_text`, `langsmith_trace_url`, `created_at` |
 
 ---
 
@@ -226,12 +214,28 @@ CREATE TABLE reports (
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/api/sessions` | Create session, returns `session_id` |
-| `GET` | `/api/sessions` | List all sessions with reports |
+| `GET` | `/api/sessions` | List all sessions |
+| `GET` | `/api/sessions/{id}` | Get single session |
 | `DELETE` | `/api/sessions/{id}` | Delete session + turns + report |
 | `DELETE` | `/api/sessions` | Clear all sessions |
 | `GET` | `/api/sessions/{id}/turns` | Get turns for a session |
+| `GET` | `/api/sessions/{id}/report` | Get report for a session |
 | `POST` | `/api/tts` | Text-to-speech via ElevenLabs |
+| `GET` | `/api/health` | Health check |
 | `WS` | `/ws/interview/{id}` | Interview WebSocket |
+
+---
+
+## Startup Sequence
+
+On `uvicorn main:app`, the lifespan handler runs in order:
+
+1. `init_db()` — creates AsyncEngine, session factory, and all tables via `Base.metadata.create_all`
+2. `load_whisper()` — initializes Groq client singleton
+3. `load_elevenlabs()` — initializes ElevenLabs client singleton
+4. `compile_graph()` — initializes LLM singleton and compiles LangGraph StateGraph
+
+All external API clients are singletons initialized at startup — no per-request instantiation.
 
 ---
 
@@ -241,31 +245,30 @@ CREATE TABLE reports (
 backend/
 ├── agents/
 │   ├── evaluator_router.py   # Evaluator-Router LangGraph node
-│   ├── llm.py                # LLM singleton (lru_cache)
-│   ├── orchestrator.py       # Graph compilation + build_graph()
+│   ├── llm.py                # Gemini LLM singleton
+│   ├── orchestrator.py       # Graph compilation + get_graph() singleton
 │   ├── report_generator.py   # Report Generator LangGraph node
 │   ├── speech_analytics.py   # Speech Analytics LangGraph node
-│   └── state.py              # SessionState TypedDict
+│   └── state.py              # SessionState + Turn TypedDicts
 ├── api/
 │   ├── routes.py             # REST endpoints
 │   └── websocket.py          # WebSocket handler + _finalize_session
 ├── audio/
 │   ├── analyzer.py           # librosa feature extraction
-│   ├── processor.py          # Parallel Whisper + librosa
-│   ├── transcriber.py        # Groq Whisper client
-│   └── vad.py                # Silero VAD singleton
+│   ├── processor.py          # Parallel Whisper + librosa (ThreadPoolExecutor)
+│   └── transcriber.py        # Groq Whisper client singleton
 ├── core/
 │   ├── config.py             # pydantic-settings, lru_cache singleton
-│   ├── exceptions.py         # Exception hierarchy
+│   ├── exceptions.py         # Exception hierarchy + FastAPI handlers
 │   └── logging.py            # Structured logging setup
 ├── db/
-│   ├── database.py           # aiosqlite connection
-│   ├── models.py             # Table creation
-│   └── queries.py            # All DB operations
+│   ├── database.py           # AsyncEngine + AsyncSession + init_db()
+│   ├── models.py             # SQLAlchemy ORM models (Session, Turn, Report)
+│   └── queries.py            # ORM query functions
 ├── domains/
-│   └── topics.py             # 20 seed topics × 5 domains
+│   └── topics.py             # 24–30 seed topics × 5 domains
 ├── prompts/
-│   ├── evaluator_router.py   # Evaluator-Router prompt builder
+│   ├── evaluator_router.py   # Evaluator-Router + first question prompt builders
 │   ├── jd_extractor.py       # JD skill extraction prompt
 │   └── report_generator.py   # Report Generator prompt builder
 ├── schemas/
@@ -273,8 +276,8 @@ backend/
 │   ├── report.py             # ReportResponse schema
 │   ├── session.py            # SessionResponse schema
 │   └── turn.py               # TurnResponse + SpeechMetrics schemas
-├── utils/
-│   └── audio_helpers.py      # Reserved for future audio utilities
+├── services/
+│   └── elevenlabs.py         # ElevenLabs async client singleton
 ├── main.py                   # App factory, lifespan, startup
 ├── requirements.txt
 └── .env.example
