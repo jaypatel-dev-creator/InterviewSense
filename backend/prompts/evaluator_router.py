@@ -11,6 +11,7 @@ def build_evaluator_router_prompt(
     current_question_number: int,
     question_count: int,
     jd_skills: list[str],
+    conversation_summary: str = "",
 ) -> str:
     difficulty_instruction = DIFFICULTY_INSTRUCTIONS.get(
         difficulty, DIFFICULTY_INSTRUCTIONS[Difficulty.MEDIUM]
@@ -30,11 +31,19 @@ If the next question does not map to any JD skill, set jd_skill_targeted to null
 
     topics_str = ", ".join(topics_covered) if topics_covered else "none yet"
 
+    history_section = ""
+    if conversation_summary.strip():
+        history_section = f"""
+CONVERSATION HISTORY (previous turns this session):
+{conversation_summary}
+Use this context to avoid repeating topics, build on prior answers, and adapt your follow-up questioning style.
+"""
+
     return f"""You are a strict but fair technical interviewer conducting a {domain.replace("_", " ").title()} interview.
 
 DIFFICULTY LEVEL: {difficulty.upper()}
 {difficulty_instruction}
-
+{history_section}
 CURRENT QUESTION ({current_question_number}/{question_count}):
 {question_text}
 

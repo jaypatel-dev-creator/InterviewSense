@@ -173,6 +173,9 @@ async def handle_interview_websocket(
             # Required by SessionState TypedDict — populated by report_generator_node
             # at session end. Empty string here satisfies the contract without
             # affecting any node that runs before _finalize_session.
+            "conversation_summary": "",
+            # Rolling plain-text summary of prior Q&A — injected into evaluator
+            # prompt so the LLM adapts questions based on prior answer quality.
         }
 
         await websocket.send_json({
@@ -367,6 +370,19 @@ async def _process_answer(
     logger.info("Agent graph complete.")
 
     evaluated_turn = state["turns"][-1]
+
+    # Update rolling conversation summary — plain text, no LLM call.
+    # Format: "Q{n}: {question} | Score: {score}/10 | A: {answer[:200]}"
+    # Truncate answer to 200 chars to keep prompt size bounded across sessions.
+    score_str = f"{evaluated_turn.get('correctness_score', 0):.1f}" if evaluated_turn.get('correctness_score') is not None else "N/A"
+    answer_preview = (evaluated_turn.get("answer_transcript") or "")[:200]
+    summary_line = (
+        f"Q{state['current_question_number'] - 1}: {evaluated_turn.get('question_text', '')[:80]} "
+        f"| Score: {score_str}/10 | A: {answer_preview}"
+    )
+    state["conversation_summary"] = (
+        state.get("conversation_summary", "") + "\n" + summary_line
+    ).strip()
 
     async with await get_db() as db:
         await insert_turn(db, {

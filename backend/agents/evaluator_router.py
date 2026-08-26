@@ -2,7 +2,6 @@ from agents.state import SessionState
 from agents.llm import get_llm
 from schemas.evaluator_output import EvaluatorRouterOutput
 from prompts.evaluator_router import build_evaluator_router_prompt
-from domains.topics import SEED_TOPICS
 from core.logging import get_logger
 from core.exceptions import AgentException
 
@@ -15,6 +14,9 @@ async def evaluator_router_node(state: SessionState) -> dict:
 
     Evaluates the candidate's answer AND decides the next question
     in one shot. Merges what would otherwise be two separate agents.
+
+    Also outputs jd_skill_targeted — which JD skill the current question
+    was designed to test. Used post-session to compute JD coverage report.
     """
     logger.debug("Evaluator-router node executing.")
 
@@ -36,6 +38,7 @@ async def evaluator_router_node(state: SessionState) -> dict:
         current_question_number=state["current_question_number"],
         question_count=state["question_count"],
         jd_skills=state.get("jd_skills", []),
+        conversation_summary=state.get("conversation_summary", ""),
     )
 
     structured_llm = llm.with_structured_output(EvaluatorRouterOutput)
@@ -47,10 +50,11 @@ async def evaluator_router_node(state: SessionState) -> dict:
 
     logger.debug(
         f"Evaluation complete — score: {result.correctness_score}, "
-        f"next: {result.next_question_type}"
+        f"next: {result.next_question_type}, "
+        f"jd_skill_targeted: {result.jd_skill_targeted}"
     )
 
-    # Update latest turn with evaluation results
+    # Update latest turn with evaluation results including JD skill traceability
     updated_turn = {
         **latest_turn,
         "correctness_score": result.correctness_score,
@@ -58,6 +62,7 @@ async def evaluator_router_node(state: SessionState) -> dict:
         "strengths": result.strengths,
         "next_question_type": result.next_question_type,
         "difficulty_adjustment": result.difficulty_adjustment,
+        "jd_skill_targeted": result.jd_skill_targeted,
     }
 
     updated_turns = turns[:-1] + [updated_turn]

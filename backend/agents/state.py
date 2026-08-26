@@ -49,5 +49,11 @@ class SessionState(TypedDict):
     # Session control
     interview_complete: bool
 
+    # Rolling conversation summary — plain text, appended after each answered turn.
+    # Injected into evaluator-router prompt so the LLM knows how the candidate
+    # answered previous questions when generating the next one.
+    # Transient — never persisted to DB, lives only during the WebSocket session.
+    conversation_summary: str
+
     # Report output — populated by report_generator_node
     improvement_plan_text: str
