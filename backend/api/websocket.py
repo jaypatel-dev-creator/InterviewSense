@@ -30,9 +30,6 @@ async def handle_interview_websocket(
     jd_text: str | None,
     candidate_name: str | None,
 ):
-    # --- Validate domain and difficulty before accepting the connection ---
-    # Reject with close code 1008 (policy violation) so the frontend gets a
-    # clear signal rather than silently running a session with bad seed topics.
     valid_domains = {d.value for d in Domain}
     valid_difficulties = {d.value for d in Difficulty}
 
@@ -100,6 +97,8 @@ async def handle_interview_websocket(
                         speech_metrics={},
                         session_id=session_id,
                     )
+                    if state.get("interview_complete"):
+                        return
 
                 elif data.get("type") == "end_interview":
                     await finalize_session(websocket, state, session_id, graph)
@@ -135,7 +134,7 @@ async def handle_interview_websocket(
                     state["current_question_number"] += 1
                     if state["current_question_number"] > question_count:
                         await finalize_session(websocket, state, session_id, graph)
-                        break
+                        return  # changed from break → return to fully exit handler
 
                     next_question = await generate_first_question(
                         domain=state["domain"],
@@ -175,6 +174,8 @@ async def handle_interview_websocket(
                         speech_metrics=speech_metrics,
                         session_id=session_id,
                     )
+                    if state.get("interview_complete"):
+                        return
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected — session: {session_id}")
@@ -243,7 +244,6 @@ async def _process_answer(
 
     evaluated_turn = state["turns"][-1]
 
-    # Update rolling conversation summary via session_service helper
     summary_line = build_conversation_summary_line(state, evaluated_turn)
     state["conversation_summary"] = (
         state.get("conversation_summary", "") + "\n" + summary_line
@@ -254,7 +254,7 @@ async def _process_answer(
 
     if state.get("interview_complete"):
         await finalize_session(websocket, state, session_id, graph)
-        return  # exit _process_answer — prevents while True loop from calling receive() on closed socket
+        return  # caller checks state["interview_complete"] and returns from the while loop
     else:
         await websocket.send_json({
             "type": "question",

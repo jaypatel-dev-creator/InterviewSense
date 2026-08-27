@@ -153,12 +153,15 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
           color="#a78bfa"
         />
         <MetricRow
-          label="Silence ratio"
-          value={(metrics?.silence_ratio ?? 0) * 100}
-          unit="%"
-          max={100}
+          label="Pitch variation"
+          value={metrics?.pitch_variation ?? 0}
+          unit=" Hz"
+          max={500}
           color="#f59e0b"
         />
+        {/* pitch_variation = std dev of F0 via librosa yin — measures vocal expressiveness.
+            Low = monotone delivery. High = engaged, expressive speaker.
+            silence_ratio removed — always 0 with browser-side VAD architecture. */}
       </div>
 
       <div className="space-y-2">

@@ -34,7 +34,7 @@ async def speech_analytics_node(state: SessionState) -> dict:
     speech_metrics = latest_turn.get("speech_metrics", {})
     transcript = latest_turn.get("answer_transcript", "")
 
-    if not transcript.strip():
+    if not transcript.strip() and not latest_turn.get("skipped", False):
         raise AgentException("Speech analytics node: latest turn has empty transcript.")
 
     logger.debug(

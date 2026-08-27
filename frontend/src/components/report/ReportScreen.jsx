@@ -21,7 +21,6 @@ function JDCoverage({ jdCoverage }) {
         className="rounded-xl p-5 space-y-4"
         style={{ backgroundColor: '#111118', border: '1px solid #1e1e2e' }}
       >
-        {/* Coverage percentage */}
         <div className="flex items-center justify-between">
           <p className="text-sm" style={{ color: '#94a3b8' }}>
             {tested.length} of {tested.length + not_tested.length} JD skills tested
@@ -31,7 +30,6 @@ function JDCoverage({ jdCoverage }) {
           </span>
         </div>
 
-        {/* Progress bar */}
         <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
           <div
             className="h-full rounded-full transition-all duration-700"
@@ -39,7 +37,6 @@ function JDCoverage({ jdCoverage }) {
           />
         </div>
 
-        {/* Tested skills */}
         {tested.length > 0 && (
           <div className="space-y-2">
             <span className="text-xs font-medium" style={{ color: '#22c55e' }}>Tested</span>
@@ -61,7 +58,6 @@ function JDCoverage({ jdCoverage }) {
           </div>
         )}
 
-        {/* Not tested skills */}
         {not_tested.length > 0 && (
           <div className="space-y-2">
             <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>Not Tested</span>
@@ -99,6 +95,9 @@ export default function ReportScreen() {
     )
   }
 
+  const endedEarly = turns && sessionConfig &&
+    turns.filter(t => !t.skipped).length + (turns.filter(t => t.skipped).length) < sessionConfig.questionCount
+
   return (
     <div style={{ width: "100%", overflowY: "auto", flex: 1 }}>
       <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "2.5rem 1.5rem" }} className="space-y-10">
@@ -135,6 +134,25 @@ export default function ReportScreen() {
           </p>
         </div>
 
+        {/* Early end banner */}
+        {endedEarly && (
+          <div
+            className="rounded-xl px-5 py-4 flex items-start gap-3"
+            style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}
+          >
+            <span style={{ color: '#f59e0b', fontSize: '16px', marginTop: '1px' }}>⚠</span>
+            <div className="space-y-1">
+              <p className="text-sm font-medium" style={{ color: '#fcd34d' }}>
+                Session ended early
+              </p>
+              <p className="text-xs" style={{ color: '#94a3b8' }}>
+                {turns.length} of {sessionConfig.questionCount} questions answered.
+                Unanswered questions are counted as 0 — scores reflect the full session length.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Score Cards */}
         <ScoreCard report={report} />
 
@@ -161,6 +179,7 @@ export default function ReportScreen() {
                 Full agent execution trace for this session
               </p>
             </div>
+
             <a
               href={report.langsmith_trace_url}
               target="_blank"

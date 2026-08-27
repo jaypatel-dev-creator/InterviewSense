@@ -41,7 +41,7 @@ FastAPI Backend
     ├── Audio Pipeline
     │   ├── Groq Whisper v3 Turbo     — speech-to-text transcription
     │   └── librosa 0.10.2            — paralinguistic feature extraction
-    │       (WPM, pause count, filler words, energy level, pitch variation, silence ratio)
+    │       (WPM, pause count, filler words, energy level, pitch variation)
     │
     └── LangGraph Agent Graph
         ├── Speech Analytics Node     — pure Python, no LLM, reads processor output

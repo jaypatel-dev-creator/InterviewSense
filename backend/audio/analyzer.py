@@ -122,4 +122,4 @@ def _compute_energy_level(audio: np.ndarray) -> float:
         return float(np.mean(rms))
     except Exception as e:
         logger.warning(f"Energy extraction failed: {e}")
-        return 0.0w
+        return 0.0
