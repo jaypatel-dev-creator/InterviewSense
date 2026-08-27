@@ -179,7 +179,7 @@ async def finalize_session(
             "langsmith_trace_url": "",
             "created_at": utcnow_iso(),
         }
-        async with await get_db() as db:
+        async with get_db() as db:
             await update_session_end(db, session_id, utcnow_iso(), 0.0)
             await insert_report(db, empty_report)
         await websocket.send_json({
@@ -279,7 +279,7 @@ async def finalize_session(
         "created_at": utcnow_iso(),
     }
 
-    async with await get_db() as db:
+    async with get_db() as db:
         await update_session_end(db, session_id, utcnow_iso(), composite)
         await insert_report(db, report)
 

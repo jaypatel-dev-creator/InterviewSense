@@ -43,7 +43,7 @@ async def create_session(payload: SessionCreateRequest):
         "jd_text": payload.jd_text,
         "start_time": utcnow_iso(),
     }
-    async with await get_db() as db:
+    async with get_db() as db:
         await insert_session(db, session)
     logger.info(f"Session created: {session_id}")
     return SessionResponse(**session)
@@ -51,14 +51,14 @@ async def create_session(payload: SessionCreateRequest):
 
 @router.get("/sessions", response_model=list[SessionResponse])
 async def list_sessions():
-    async with await get_db() as db:
+    async with get_db() as db:
         sessions = await get_all_sessions(db)
     return [SessionResponse(**s) for s in sessions]
 
 
 @router.get("/sessions/{session_id}", response_model=SessionResponse)
 async def get_session(session_id: str):
-    async with await get_db() as db:
+    async with get_db() as db:
         session = await get_session_by_id(db, session_id)
     if session is None:
         raise SessionNotFoundException(session_id)
@@ -67,13 +67,13 @@ async def get_session(session_id: str):
 
 @router.delete("/sessions", status_code=204)
 async def remove_all_sessions():
-    async with await get_db() as db:
+    async with get_db() as db:
         await delete_all_sessions(db)
 
 
 @router.delete("/sessions/{session_id}", status_code=204)
 async def remove_session(session_id: str):
-    async with await get_db() as db:
+    async with get_db() as db:
         deleted = await delete_session(db, session_id)
     if not deleted:
         raise SessionNotFoundException(session_id)
@@ -83,7 +83,7 @@ async def remove_session(session_id: str):
 
 @router.get("/sessions/{session_id}/turns", response_model=list[TurnResponse])
 async def get_turns(session_id: str):
-    async with await get_db() as db:
+    async with get_db() as db:
         session = await get_session_by_id(db, session_id)
         if session is None:
             raise SessionNotFoundException(session_id)
@@ -100,7 +100,7 @@ async def get_turns(session_id: str):
 
 @router.get("/sessions/{session_id}/report", response_model=ReportResponse)
 async def get_report(session_id: str):
-    async with await get_db() as db:
+    async with get_db() as db:
         session = await get_session_by_id(db, session_id)
         if session is None:
             raise SessionNotFoundException(session_id)

@@ -43,10 +43,10 @@ def extract_speech_features(
     # --- librosa features (raw audio signal) ---
     pitch_variation = _compute_pitch_variation(audio, sample_rate)
     energy_level = _compute_energy_level(audio)
-    silence_ratio = _compute_silence_ratio(audio, sample_rate)
-    # confidence_proxy removed — Groq hardcodes word probabilities to 1.0,
-    # making the metric always 1.0 and meaningless. energy_level (RMS) is
-    # used as the vocal delivery proxy throughout the scoring pipeline.
+    # silence_ratio removed — always 0 with browser-side VAD architecture.
+    # Browser trims silence before sending chunks so the backend never sees
+    # silent frames. _compute_silence_ratio also requires scikit-learn
+    # internally via librosa — removed to avoid the dependency.
 
     metrics = {
         "wpm": round(wpm, 2),
@@ -55,7 +55,6 @@ def extract_speech_features(
         "answer_duration_seconds": round(duration, 2),
         "pitch_variation": round(pitch_variation, 4),
         "energy_level": round(energy_level, 4),
-        "silence_ratio": round(silence_ratio, 4),
     }
 
     logger.debug(f"Speech features extracted: {metrics}")
@@ -123,17 +122,4 @@ def _compute_energy_level(audio: np.ndarray) -> float:
         return float(np.mean(rms))
     except Exception as e:
         logger.warning(f"Energy extraction failed: {e}")
-        return 0.0
-
-
-def _compute_silence_ratio(audio: np.ndarray, sample_rate: int) -> float:
-    """Ratio of silent frames to total frames."""
-    try:
-        intervals = librosa.effects.split(audio, top_db=30)
-        if len(intervals) == 0:
-            return 1.0
-        speech_samples = sum(end - start for start, end in intervals)
-        return 1.0 - (speech_samples / len(audio))
-    except Exception as e:
-        logger.warning(f"Silence ratio extraction failed: {e}")
-        return 0.0
+        return 0.0w

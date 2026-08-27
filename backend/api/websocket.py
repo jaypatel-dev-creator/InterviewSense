@@ -129,7 +129,7 @@ async def handle_interview_websocket(
                     }
                     state["turns"] = state["turns"] + [skipped_turn]
 
-                    async with await get_db() as db:
+                    async with get_db() as db:
                         await insert_turn(db, {**skipped_turn, "session_id": session_id})
 
                     state["current_question_number"] += 1
@@ -249,11 +249,12 @@ async def _process_answer(
         state.get("conversation_summary", "") + "\n" + summary_line
     ).strip()
 
-    async with await get_db() as db:
+    async with get_db() as db:
         await insert_turn(db, {**evaluated_turn, "session_id": session_id})
 
     if state.get("interview_complete"):
         await finalize_session(websocket, state, session_id, graph)
+        return  # exit _process_answer — prevents while True loop from calling receive() on closed socket
     else:
         await websocket.send_json({
             "type": "question",
