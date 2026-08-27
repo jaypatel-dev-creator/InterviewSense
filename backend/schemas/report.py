@@ -14,4 +14,4 @@ class ReportResponse(BaseModel):
     # null when no JD was provided for the session
     improvement_plan_text: str | None
     langsmith_trace_url: str | None
-    created_at: strw
+    created_at: str
