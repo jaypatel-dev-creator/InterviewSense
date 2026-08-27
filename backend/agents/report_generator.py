@@ -17,20 +17,12 @@ async def report_generator_node(state: SessionState) -> dict:
     llm = get_llm()
     turns = state.get("turns", [])
 
-    if not turns:
-        raise AgentException("Report generator called with no turns in state.")
-
-    # Compute aggregate scores
     technical_scores = [
         t.get("correctness_score", 0.0)
         for t in turns
         if t.get("correctness_score") is not None
     ]
 
-    # Use energy_level as vocal delivery proxy — confidence_proxy is dead
-    # (Groq hardcodes word probabilities to 1.0, making it always 1.0).
-    # energy_level is librosa RMS — actual signal, varies with delivery.
-    # Skipped questions have no speech_metrics so energy = 0 — excluded.
     energy_scores = [
         t.get("speech_metrics", {}).get("energy_level", 0.0)
         for t in turns
@@ -38,7 +30,6 @@ async def report_generator_node(state: SessionState) -> dict:
     ]
 
     avg_technical = sum(technical_scores) / len(technical_scores) if technical_scores else 0.0
-    # Rescale to 0–10 (cap at 0.10 RMS = 10) to match websocket.py scoring
     avg_energy_raw = sum(energy_scores) / len(energy_scores) if energy_scores else 0.0
     avg_speech = min(10.0, (avg_energy_raw / 0.10) * 10.0)
 
@@ -54,10 +45,6 @@ async def report_generator_node(state: SessionState) -> dict:
     try:
         response = await llm.ainvoke(prompt)
         logger.debug(f"Raw response.content type: {type(response.content)}, value: {repr(response.content)[:300]}")
-        # gemini-3.x via langchain-google-genai returns response.content as
-        # list[dict] not str. Extract all text parts — same pattern as
-        # _extract_text() in websocket.py. Storing the raw list would serialize
-        # to "[object Object]" in the frontend and garbled text in the DB.
         raw = response.content
         if isinstance(raw, list):
             improvement_plan = "".join(

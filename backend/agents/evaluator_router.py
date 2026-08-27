@@ -22,10 +22,6 @@ async def evaluator_router_node(state: SessionState) -> dict:
 
     llm = get_llm()
     turns = state.get("turns", [])
-
-    if not turns:
-        raise AgentException("Evaluator-router called with no turns in state.")
-
     latest_turn = turns[-1]
     topics_covered = [t.get("question_text", "")[:50] for t in turns[:-1]]
 
@@ -54,7 +50,6 @@ async def evaluator_router_node(state: SessionState) -> dict:
         f"jd_skill_targeted: {result.jd_skill_targeted}"
     )
 
-    # Update latest turn with evaluation results including JD skill traceability
     updated_turn = {
         **latest_turn,
         "correctness_score": result.correctness_score,
@@ -67,8 +62,6 @@ async def evaluator_router_node(state: SessionState) -> dict:
 
     updated_turns = turns[:-1] + [updated_turn]
 
-    # Increment first, then check — prevents off-by-one early termination.
-    # Cast to int guards against question_count arriving as a string from query params.
     next_question_number = state["current_question_number"] + 1
     interview_complete = next_question_number > int(state["question_count"])
 
