@@ -104,7 +104,7 @@ export default function ScoreCard({ report }) {
         />
         <Score
           label="Communication"
-          sublabel="Vocal energy"
+          sublabel="Energy · pitch · fluency"
           value={report.communication_score}
           color="#a78bfa"
         />

@@ -134,14 +134,42 @@ def _compute_pacing_score(wpm: float) -> float:
     return round(max(2.0, min(10.0, score)), 2)
 
 
-def _compute_communication_score(energy_level: float) -> float:
+def _compute_communication_score(speech_metrics: dict) -> float:
     """
-    Converts librosa RMS energy to a 0-10 communication score.
-    Cap: 0.10 RMS = 10.0.
+    Weighted communication score from three paralinguistic signals:
+
+    - Energy level (40%) — librosa RMS, proxy for vocal confidence/projection
+      Scaled: 0.10 RMS = 10.0. Capped at 10.
+    - Pitch variation (30%) — F0 std dev via librosa yin, proxy for expressiveness
+      Scaled: 80 Hz std dev = 10.0. Monotone delivery scores low.
+    - Fluency / filler rate (30%) — filler words per total word, proxy for hesitation
+      0 fillers = 10.0, degrades linearly. 0.5 fillers/word = 0.0.
+
+    Using three signals instead of energy alone makes the score robust to
+    hardware variation — a laptop mic user can still score well on pitch
+    variation and fluency even if energy reads low.
     """
-    if energy_level <= 0:
-        return 0.0
-    return round(min(10.0, (energy_level / 0.10) * 10.0), 2)
+    energy_level = speech_metrics.get("energy_level", 0.0)
+    pitch_variation = speech_metrics.get("pitch_variation", 0.0)
+    filler_count = speech_metrics.get("filler_word_count", 0)
+    wpm = speech_metrics.get("wpm", 0.0)
+    duration = speech_metrics.get("answer_duration_seconds", 0.0)
+
+    # Approximate word count from WPM and duration
+    word_count = max(1, round((wpm / 60) * duration)) if wpm > 0 and duration > 0 else 1
+
+    # Energy score — cap at 0.10 RMS
+    energy_score = min(10.0, (energy_level / 0.10) * 10.0) if energy_level > 0 else 0.0
+
+    # Pitch variation score — cap at 80 Hz std dev
+    pitch_score = min(10.0, (pitch_variation / 80.0) * 10.0) if pitch_variation > 0 else 0.0
+
+    # Fluency score — filler rate penalises hesitation
+    filler_rate = filler_count / word_count
+    fluency_score = max(0.0, 10.0 - filler_rate * 20.0)
+
+    weighted = (energy_score * 0.40) + (pitch_score * 0.30) + (fluency_score * 0.30)
+    return round(min(10.0, weighted), 2)
 
 
 async def finalize_session(
@@ -208,14 +236,15 @@ async def finalize_session(
     ]
     avg_technical = sum(technical_scores) / question_count if technical_scores else 0.0
 
-    # Communication score — N/A if fewer than half questions had voice answers
+    # Communication score — weighted composite of energy, pitch variation, fluency
+    # N/A if fewer than half questions had voice answers
     audio_turns = [
         t for t in turns
         if t.get("speech_metrics", {}).get("energy_level", 0.0) > 0
     ]
     if len(audio_turns) >= question_count / 2:
         avg_communication = sum(
-            _compute_communication_score(t["speech_metrics"]["energy_level"])
+            _compute_communication_score(t["speech_metrics"])
             for t in audio_turns
         ) / len(audio_turns)
     else:
