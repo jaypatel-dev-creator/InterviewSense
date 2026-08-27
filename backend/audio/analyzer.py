@@ -107,8 +107,12 @@ def _compute_pitch_variation(audio: np.ndarray, sample_rate: int) -> float:
             fmax=librosa.note_to_hz("C7"),
             sr=sample_rate,
         )
-        # yin returns 0.0 for unvoiced frames instead of NaN — filter those out
-        f0_voiced = f0[f0 > 0]
+        # Filter to realistic human speech range (85–300 Hz).
+        # librosa.yin returns spurious high-frequency estimates on consonants
+        # and noise frames even with f0 > 0 filter — these inflate std dev to
+        # 400-600 Hz which is meaningless. Human fundamental frequency sits
+        # between 85 Hz (deep male voice) and 300 Hz (high female voice).
+        f0_voiced = f0[(f0 >= 85) & (f0 <= 300)]
         return float(np.std(f0_voiced)) if len(f0_voiced) > 0 else 0.0
     except Exception as e:
         logger.warning(f"Pitch extraction failed: {e}")

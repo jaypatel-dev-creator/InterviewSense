@@ -161,8 +161,10 @@ def _compute_communication_score(speech_metrics: dict) -> float:
     # Energy score — cap at 0.10 RMS
     energy_score = min(10.0, (energy_level / 0.10) * 10.0) if energy_level > 0 else 0.0
 
-    # Pitch variation score — cap at 80 Hz std dev
-    pitch_score = min(10.0, (pitch_variation / 80.0) * 10.0) if pitch_variation > 0 else 0.0
+    # Pitch variation score — cap at 60 Hz std dev (realistic after 85-300 Hz filter)
+    # Raw yin output filtered to human speech range gives 10-60 Hz std dev for
+    # normal speech. 80 Hz cap was designed for unfiltered output and no longer applies.
+    pitch_score = min(10.0, (pitch_variation / 60.0) * 10.0) if pitch_variation > 0 else 0.0
 
     # Fluency score — filler rate penalises hesitation
     filler_rate = filler_count / word_count
