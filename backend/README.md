@@ -77,7 +77,16 @@ speech_analytics_node  ──── pure Python, no LLM
 ### Nodes
 
 **`speech_analytics_node`**
-Reads audio features already attached to state by the WebSocket handler after parallel Whisper + librosa processing. Validates and logs WPM, pauses, fillers. No LLM call — pure Python.
+Graph entry point and validation gate — runs first on every invocation. Fails fast
+with AgentException if turns or transcript are missing, so downstream LLM nodes
+(evaluator_router, report_generator) can assume clean state without redundant checks.
+
+Audio processing (Whisper + librosa) intentionally runs pre-graph in the WebSocket
+handler via process_audio_chunk(). This ensures transcript_update reaches the client
+immediately after the candidate finishes speaking, without waiting for graph invocation
+latency. By the time this node executes, speech_metrics and answer_transcript are
+already populated in state. Node validates their presence and logs WPM, pauses, and
+filler counts. No LLM call — pure Python.
 
 **`evaluator_router_node`**
 Single Gemini call with structured Pydantic output (`EvaluatorRouterOutput`). In one shot:

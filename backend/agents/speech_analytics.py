@@ -44,4 +44,4 @@ async def speech_analytics_node(state: SessionState) -> dict:
         f"Fillers: {speech_metrics.get('filler_word_count', 0)} "
     )
 
-    return {}r
+    return {}
