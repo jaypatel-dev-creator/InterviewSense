@@ -1,41 +1,45 @@
-function Score({ label, value, color, sublabel }) {
+function Score({ label, value, sublabel }) {
   const isNA = value === null || value === undefined
   const pct = isNA ? 0 : Math.min(100, (value / 10) * 100)
+  const color = isNA ? '#a8a49e' : value >= 7 ? '#16a34a' : value >= 5 ? '#d97706' : '#dc2626'
 
   return (
     <div
-      className="rounded-xl p-5 space-y-4"
-      style={{ backgroundColor: '#111118', border: '1px solid #1e1e2e' }}
+      className="p-4 space-y-3"
+      style={{ backgroundColor: '#ffffff', border: '1px solid #e2e0db' }}
     >
       <div className="space-y-0.5">
-        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: '#64748b' }}>
+        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: '#a8a49e' }}>
           {label}
         </span>
         {sublabel && (
-          <p className="text-xs" style={{ color: '#475569' }}>{sublabel}</p>
+          <p className="text-xs" style={{ color: '#d4d2cd' }}>{sublabel}</p>
         )}
       </div>
       {isNA ? (
-        <div className="space-y-1">
-          <span className="text-2xl font-semibold font-mono" style={{ color: '#475569' }}>
+        <div className="space-y-0.5">
+          <span className="text-2xl font-bold" style={{ color: '#d4d2cd', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
             N/A
           </span>
-          <p className="text-xs" style={{ color: '#334155' }}>
+          <p className="text-xs" style={{ color: '#a8a49e' }}>
             Voice answers needed
           </p>
         </div>
       ) : (
         <div className="flex items-end gap-1">
-          <span className="text-4xl font-semibold font-mono" style={{ color }}>
+          <span
+            className="text-4xl font-bold leading-none"
+            style={{ color, fontFamily: "'Bricolage Grotesque', sans-serif" }}
+          >
             {value.toFixed(1)}
           </span>
-          <span className="text-lg mb-1" style={{ color: '#64748b' }}>/10</span>
+          <span className="text-base mb-0.5" style={{ color: '#a8a49e' }}>/10</span>
         </div>
       )}
-      <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
+      <div className="h-px overflow-hidden" style={{ backgroundColor: '#e2e0db' }}>
         <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: isNA ? '#1e1e2e' : color }}
+          className="h-full"
+          style={{ width: `${pct}%`, backgroundColor: isNA ? '#e2e0db' : color }}
         />
       </div>
     </div>
@@ -45,7 +49,7 @@ function Score({ label, value, color, sublabel }) {
 export default function ScoreCard({ report }) {
   const composite = report.composite_score
   const compositeColor =
-    composite >= 7 ? '#22c55e' : composite >= 5 ? '#f59e0b' : '#ef4444'
+    composite >= 7 ? '#16a34a' : composite >= 5 ? '#d97706' : '#dc2626'
 
   const commNA = report.communication_score === null || report.communication_score === undefined
   const pacingNA = report.pacing_score === null || report.pacing_score === undefined
@@ -57,40 +61,50 @@ export default function ScoreCard({ report }) {
     return 'Technical only (no voice answers)'
   })()
 
+  const grade = composite >= 7 ? 'A' : composite >= 5 ? 'B' : 'C'
+
   return (
     <div className="space-y-4">
-      {/* Composite */}
+
+      {/* Composite — editorial headline number */}
       <div
-        className="rounded-xl p-6 flex items-center justify-between"
-        style={{
-          backgroundColor: '#111118',
-          border: `1px solid ${compositeColor}33`,
-        }}
+        className="p-6"
+        style={{ backgroundColor: '#ffffff', border: `1px solid #e2e0db`, borderLeft: `3px solid ${compositeColor}` }}
       >
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider" style={{ color: '#64748b' }}>
-            Overall Score
-          </p>
-          <div className="flex items-end gap-1 mt-2">
-            <span className="text-5xl font-semibold font-mono" style={{ color: compositeColor }}>
-              {composite?.toFixed(1) ?? '—'}
-            </span>
-            <span className="text-xl mb-1" style={{ color: '#64748b' }}>/10</span>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider" style={{ color: '#a8a49e' }}>
+              Overall Score
+            </p>
+            <div className="flex items-end gap-2 mt-2">
+              <span
+                className="leading-none font-bold"
+                style={{ color: compositeColor, fontSize: '72px', fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 1 }}
+              >
+                {composite?.toFixed(1) ?? '—'}
+              </span>
+              <span className="text-2xl mb-2" style={{ color: '#d4d2cd' }}>/10</span>
+            </div>
+            <p className="text-xs mt-2" style={{ color: '#a8a49e' }}>
+              {compositeLabel}
+            </p>
           </div>
-          <p className="text-xs mt-2" style={{ color: '#475569' }}>
-            {compositeLabel}
-          </p>
-        </div>
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center"
-          style={{
-            backgroundColor: `${compositeColor}15`,
-            border: `2px solid ${compositeColor}40`,
-          }}
-        >
-          <span className="text-2xl font-bold font-mono" style={{ color: compositeColor }}>
-            {composite >= 7 ? 'A' : composite >= 5 ? 'B' : 'C'}
-          </span>
+
+          {/* Grade badge */}
+          <div
+            className="w-16 h-16 flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: `${compositeColor}0f`,
+              border: `1px solid ${compositeColor}30`,
+            }}
+          >
+            <span
+              className="text-2xl font-bold"
+              style={{ color: compositeColor, fontFamily: "'Bricolage Grotesque', sans-serif" }}
+            >
+              {grade}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -100,19 +114,17 @@ export default function ScoreCard({ report }) {
           label="Technical"
           sublabel="Answer correctness"
           value={report.technical_score}
-          color="#3b82f6"
         />
         <Score
           label="Communication"
+          
           sublabel="Energy · pitch · fluency"
           value={report.communication_score}
-          color="#a78bfa"
         />
         <Score
           label="Pacing"
           sublabel="120–160 wpm ideal"
           value={report.pacing_score}
-          color="#22c55e"
         />
       </div>
     </div>

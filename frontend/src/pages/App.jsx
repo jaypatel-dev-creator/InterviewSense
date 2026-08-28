@@ -8,7 +8,7 @@ export default function App() {
   const { screen, sidebarOpen, toggleSidebar, error, clearError } = useUIStore()
 
   return (
-    <div className="min-h-screen flex w-full" style={{ backgroundColor: '#0a0a0a' }}>
+    <div className="min-h-screen flex w-full" style={{ backgroundColor: '#f8f7f4' }}>
       {/* Session History Sidebar */}
       <SessionHistory isOpen={sidebarOpen} onClose={toggleSidebar} />
 
@@ -19,15 +19,15 @@ export default function App() {
         {screen !== 'setup' && (
           <header
             className="flex items-center justify-between px-6 py-4 border-b"
-            style={{ borderColor: '#1a1a1a', backgroundColor: '#0a0a0a' }}
+            style={{ borderColor: '#e2e0db', backgroundColor: '#f8f7f4' }}
           >
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: '#404040' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#94a3b8'}
-                onMouseLeave={e => e.currentTarget.style.color = '#404040'}
+                className="p-2 transition-colors"
+                style={{ color: '#a8a49e' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#0f0e0c'}
+                onMouseLeave={e => e.currentTarget.style.color = '#a8a49e'}
                 aria-label="Toggle session history"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -36,14 +36,14 @@ export default function App() {
                   <line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               </button>
-              <span className="font-semibold tracking-tight text-sm" style={{ color: '#f1f5f9' }}>
-                Interview<span style={{ color: '#3b82f6' }}>Sense</span>
+              <span className="font-semibold tracking-tight text-sm" style={{ color: '#0f0e0c', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                Interview<span style={{ color: '#c84b1a' }}>Sense</span>
               </span>
             </div>
 
             <span
               className="text-xs font-mono"
-              style={{ color: '#2a2a2a' }}
+              style={{ color: '#d4d2cd' }}
             >
               v1.0.0
             </span>
@@ -57,10 +57,10 @@ export default function App() {
           >
             <button
               onClick={toggleSidebar}
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: '#64748b' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#94a3b8'}
-              onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+              className="p-2 transition-colors"
+              style={{ color: '#a8a49e' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#0f0e0c'}
+              onMouseLeave={e => e.currentTarget.style.color = '#a8a49e'}
               aria-label="Toggle session history"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,8 +69,8 @@ export default function App() {
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <span className="font-semibold tracking-tight text-sm" style={{ color: '#f1f5f9' }}>
-              Interview<span style={{ color: '#3b82f6' }}>Sense</span>
+            <span className="font-semibold tracking-tight text-sm" style={{ color: '#0f0e0c', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+              Interview<span style={{ color: '#c84b1a' }}>Sense</span>
             </span>
           </div>
         )}
@@ -78,15 +78,15 @@ export default function App() {
         {/* Error Banner */}
         {error && (
           <div
-            className="mx-6 mt-4 px-4 py-3 rounded-xl flex items-center justify-between text-sm"
+            className="mx-6 mt-4 px-4 py-3 flex items-center justify-between text-sm"
             style={{
-              backgroundColor: 'rgba(239,68,68,0.06)',
-              border: '1px solid rgba(239,68,68,0.2)',
-              color: '#fca5a5',
+              backgroundColor: 'rgba(200,75,26,0.06)',
+              border: '1px solid rgba(200,75,26,0.2)',
+              color: '#c84b1a',
             }}
           >
             <span>{error}</span>
-            <button onClick={clearError} style={{ color: '#555' }}>✕</button>
+            <button onClick={clearError} style={{ color: '#a8a49e' }}>✕</button>
           </div>
         )}
 

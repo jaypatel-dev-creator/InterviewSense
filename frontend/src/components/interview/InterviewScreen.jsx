@@ -67,15 +67,15 @@ export default function InterviewScreen() {
   }
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: '#f8f7f4' }}>
 
       {/* Progress Bar */}
-      <div className="h-0.5 w-full" style={{ backgroundColor: '#1e1e2e' }}>
+      <div className="h-0.5 w-full" style={{ backgroundColor: '#e2e0db' }}>
         <div
           className="h-full transition-all duration-500"
           style={{
             width: `${(currentQuestionNumber / questionCount) * 100}%`,
-            backgroundColor: '#3b82f6',
+            backgroundColor: '#c84b1a',
           }}
         />
       </div>
@@ -87,25 +87,25 @@ export default function InterviewScreen() {
 
           {/* Question Counter */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono" style={{ color: '#64748b' }}>
+            <span className="text-xs font-mono" style={{ color: '#a8a49e' }}>
               Question {currentQuestionNumber} of {questionCount}
             </span>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRepeat}
-                className="text-xs px-3 py-1.5 rounded-md transition-colors"
-                style={{ color: '#64748b', border: '1px solid #1e1e2e' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = '#1e1e2e'}
+                className="text-xs px-3 py-1.5"
+                style={{ color: '#6b6860', border: '1px solid #e2e0db' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#c84b1a'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e0db'}
               >
                 Repeat
               </button>
               <button
                 onClick={handleSkip}
-                className="text-xs px-3 py-1.5 rounded-md transition-colors"
-                style={{ color: '#64748b', border: '1px solid #1e1e2e' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#64748b'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = '#1e1e2e'}
+                className="text-xs px-3 py-1.5"
+                style={{ color: '#6b6860', border: '1px solid #e2e0db' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#0f0e0c'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e0db'}
               >
                 Skip
               </button>
@@ -114,8 +114,8 @@ export default function InterviewScreen() {
 
           {/* Question Display */}
           <div
-            className="rounded-xl px-6 py-5"
-            style={{ backgroundColor: '#111118', border: '1px solid #1e1e2e' }}
+            className="px-6 py-5"
+            style={{ backgroundColor: '#ffffff', border: '1px solid #e2e0db' }}
           >
             {isAISpeaking && (
               <div className="flex items-center gap-2 mb-3">
@@ -123,22 +123,22 @@ export default function InterviewScreen() {
                   {[0, 1, 2].map((i) => (
                     <div
                       key={i}
-                      className="w-1 h-1 rounded-full"
+                      className="w-1 h-1"
                       style={{
-                        backgroundColor: '#3b82f6',
+                        backgroundColor: '#c84b1a',
                         animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
                       }}
                     />
                   ))}
                 </div>
-                <span className="text-xs" style={{ color: '#3b82f6' }}>
+                <span className="text-xs" style={{ color: '#c84b1a' }}>
                   InterviewSense is speaking
                 </span>
               </div>
             )}
             <p
               className="text-lg leading-relaxed font-medium"
-              style={{ color: currentQuestion ? '#f1f5f9' : '#64748b' }}
+              style={{ color: currentQuestion ? '#0f0e0c' : '#a8a49e' }}
             >
               {currentQuestion || 'Preparing your first question...'}
             </p>
@@ -153,32 +153,29 @@ export default function InterviewScreen() {
               <button
                 onClick={toggleRecording}
                 disabled={isProcessing || isAISpeaking}
-                className="w-16 h-16 rounded-full flex items-center justify-center transition-all"
+                className="w-16 h-16 flex items-center justify-center"
                 style={{
                   backgroundColor: isRecording
-                    ? 'rgba(239,68,68,0.15)'
-                    : 'rgba(59,130,246,0.15)',
-                  border: `2px solid ${isRecording ? '#ef4444' : '#3b82f6'}`,
-                  boxShadow: isRecording
-                    ? '0 0 24px rgba(239,68,68,0.3)'
-                    : 'none',
+                    ? 'rgba(239,68,68,0.08)'
+                    : 'rgba(200,75,26,0.08)',
+                  border: `2px solid ${isRecording ? '#ef4444' : '#c84b1a'}`,
                   opacity: isProcessing || isAISpeaking ? 0.4 : 1,
                   cursor: isProcessing || isAISpeaking ? 'not-allowed' : 'pointer',
                 }}
               >
                 {isRecording ? (
                   <div
-                    className="w-5 h-5 rounded-sm"
+                    className="w-5 h-5"
                     style={{ backgroundColor: '#ef4444' }}
                   />
                 ) : (
                   <div
                     className="w-5 h-5 rounded-full"
-                    style={{ backgroundColor: '#3b82f6' }}
+                    style={{ backgroundColor: '#c84b1a' }}
                   />
                 )}
               </button>
-              <span className="text-xs" style={{ color: '#64748b' }}>
+              <span className="text-xs" style={{ color: '#a8a49e' }}>
                 {isAISpeaking
                   ? 'InterviewSense is speaking...'
                   : isRecording
@@ -187,10 +184,10 @@ export default function InterviewScreen() {
               </span>
               <button
                 onClick={() => setTextFallback(true)}
-                className="text-xs transition-colors"
-                style={{ color: '#64748b' }}
-                onMouseEnter={e => e.target.style.color = '#94a3b8'}
-                onMouseLeave={e => e.target.style.color = '#64748b'}
+                className="text-xs"
+                style={{ color: '#a8a49e' }}
+                onMouseEnter={e => e.target.style.color = '#0f0e0c'}
+                onMouseLeave={e => e.target.style.color = '#a8a49e'}
               >
                 Switch to text input
               </button>
@@ -202,15 +199,15 @@ export default function InterviewScreen() {
                 placeholder="Type your answer here..."
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg text-sm resize-none answer-textarea"
+                className="w-full px-4 py-3 text-sm resize-none answer-textarea"
                 style={{
-                  backgroundColor: '#111118',
-                  border: '1px solid #1e1e2e',
-                  color: '#f1f5f9',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e0db',
+                  color: '#0f0e0c',
                   outline: 'none',
                 }}
-                onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                onBlur={e => e.target.style.borderColor = '#1e1e2e'}
+                onFocus={e => e.target.style.borderColor = '#c84b1a'}
+                onBlur={e => e.target.style.borderColor = '#e2e0db'}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && e.metaKey) handleTextSubmit()
                 }}
@@ -219,9 +216,9 @@ export default function InterviewScreen() {
                 <button
                   onClick={handleTextSubmit}
                   disabled={!textInput.trim() || isProcessing}
-                  className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                  className="flex-1 py-2.5 text-sm font-medium"
                   style={{
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: '#c84b1a',
                     color: '#ffffff',
                     opacity: !textInput.trim() || isProcessing ? 0.5 : 1,
                   }}
@@ -230,8 +227,8 @@ export default function InterviewScreen() {
                 </button>
                 <button
                   onClick={() => setTextFallback(false)}
-                  className="px-4 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{ border: '1px solid #1e1e2e', color: '#64748b' }}
+                  className="px-4 py-2.5 text-sm"
+                  style={{ border: '1px solid #e2e0db', color: '#6b6860' }}
                 >
                   Use mic
                 </button>
@@ -246,15 +243,15 @@ export default function InterviewScreen() {
           <div className="flex justify-center pt-4">
             <button
               onClick={endSession}
-              className="text-xs px-4 py-2 rounded-lg transition-colors"
-              style={{ color: '#64748b', border: '1px solid #1e1e2e' }}
+              className="text-xs px-4 py-2"
+              style={{ color: '#a8a49e', border: '1px solid #e2e0db' }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = '#ef4444'
-                e.currentTarget.style.color = '#fca5a5'
+                e.currentTarget.style.color = '#ef4444'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#1e1e2e'
-                e.currentTarget.style.color = '#64748b'
+                e.currentTarget.style.borderColor = '#e2e0db'
+                e.currentTarget.style.color = '#a8a49e'
               }}
             >
               End Interview
@@ -265,7 +262,7 @@ export default function InterviewScreen() {
         {/* Right — Analytics Panel */}
         <div
           className="w-full lg:w-72 border-t lg:border-t-0 lg:border-l"
-          style={{ borderColor: '#1e1e2e' }}
+          style={{ borderColor: '#e2e0db' }}
         >
           <AnalyticsPanel
             metrics={speechMetrics}

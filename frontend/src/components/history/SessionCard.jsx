@@ -22,10 +22,10 @@ export default function SessionCard({ session, onDelete }) {
 
   const score = session.composite_score
   const scoreColor =
-    score == null ? '#64748b'
-    : score >= 7 ? '#22c55e'
-    : score >= 5 ? '#f59e0b'
-    : '#ef4444'
+    score == null ? '#a8a49e'
+    : score >= 7 ? '#16a34a'
+    : score >= 5 ? '#d97706'
+    : '#dc2626'
 
   const handleDelete = async () => {
     if (!confirming) {
@@ -45,32 +45,35 @@ export default function SessionCard({ session, onDelete }) {
 
   return (
     <div
-      className="rounded-lg px-4 py-3 space-y-2 transition-colors cursor-default"
-      style={{ backgroundColor: '#0a0a0f', border: '1px solid #1e1e2e' }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
+      className="px-4 py-3 space-y-2 cursor-default"
+      style={{ backgroundColor: '#f8f7f4', border: '1px solid #e2e0db' }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = '#c84b1a'}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = '#1e1e2e'
+        e.currentTarget.style.borderColor = '#e2e0db'
         setConfirming(false)
       }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium" style={{ color: '#f1f5f9' }}>
+        <span className="text-xs font-medium" style={{ color: '#0f0e0c' }}>
           {DOMAIN_LABELS[session.domain] || session.domain}
         </span>
-        <span className="text-xs font-mono font-semibold" style={{ color: scoreColor }}>
+        <span
+          className="text-xs font-mono font-semibold"
+          style={{ color: scoreColor }}
+        >
           {score != null ? `${score.toFixed(1)}/10` : 'Incomplete'}
         </span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs capitalize" style={{ color: '#64748b' }}>
+        <span className="text-xs capitalize" style={{ color: '#a8a49e' }}>
           {session.difficulty} · {session.question_count}Q
         </span>
-        <span className="text-xs" style={{ color: '#64748b' }}>
+        <span className="text-xs" style={{ color: '#a8a49e' }}>
           {date}
         </span>
       </div>
       {session.candidate_name && (
-        <span className="text-xs" style={{ color: '#64748b' }}>
+        <span className="text-xs" style={{ color: '#6b6860' }}>
           {session.candidate_name}
         </span>
       )}
@@ -80,10 +83,10 @@ export default function SessionCard({ session, onDelete }) {
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="text-xs px-2 py-1 rounded transition-colors"
+          className="text-xs px-2 py-1"
           style={{
-            color: confirming ? '#fca5a5' : '#64748b',
-            border: `1px solid ${confirming ? '#ef4444' : 'transparent'}`,
+            color: confirming ? '#dc2626' : '#a8a49e',
+            border: `1px solid ${confirming ? 'rgba(220,38,38,0.3)' : 'transparent'}`,
             opacity: deleting ? 0.5 : 1,
           }}
         >

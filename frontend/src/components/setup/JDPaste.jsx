@@ -7,10 +7,10 @@ export default function JDPaste({ value, onChange }) {
     <div className="space-y-3">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 text-sm transition-colors"
-        style={{ color: expanded ? '#3b82f6' : '#404040' }}
-        onMouseEnter={e => e.currentTarget.style.color = '#94a3b8'}
-        onMouseLeave={e => e.currentTarget.style.color = expanded ? '#3b82f6' : '#404040'}
+        className="flex items-center gap-2 text-sm"
+        style={{ color: expanded ? '#c84b1a' : '#6b6860' }}
+        onMouseEnter={e => e.currentTarget.style.color = '#0f0e0c'}
+        onMouseLeave={e => e.currentTarget.style.color = expanded ? '#c84b1a' : '#6b6860'}
       >
         <svg
           width="13"
@@ -28,7 +28,7 @@ export default function JDPaste({ value, onChange }) {
           <polyline points="9 18 15 12 9 6" />
         </svg>
         Paste a job description
-        <span style={{ color: '#2a2a2a' }}>(optional)</span>
+        <span style={{ color: '#d4d2cd' }}>(optional)</span>
       </button>
 
       {expanded && (
@@ -38,28 +38,28 @@ export default function JDPaste({ value, onChange }) {
             placeholder="Paste the job description here. InterviewSense will extract required skills and generate questions targeting exactly this role..."
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl text-sm resize-none"
+            className="w-full px-4 py-3 text-sm resize-none"
             style={{
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #1a1a1a',
-              color: '#94a3b8',
+              backgroundColor: '#f8f7f4',
+              border: '1px solid #e2e0db',
+              color: '#0f0e0c',
               outline: 'none',
               lineHeight: '1.7',
             }}
-            onFocus={e => e.target.style.borderColor = '#3b82f6'}
-            onBlur={e => e.target.style.borderColor = '#1a1a1a'}
+            onFocus={e => e.target.style.borderColor = '#c84b1a'}
+            onBlur={e => e.target.style.borderColor = '#e2e0db'}
           />
           {value && (
             <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: '#2a2a2a' }}>
+              <span className="text-xs" style={{ color: '#d4d2cd' }}>
                 {value.length} characters
               </span>
               <button
                 onClick={() => onChange('')}
-                className="text-xs transition-colors"
-                style={{ color: '#2a2a2a' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#555'}
-                onMouseLeave={e => e.currentTarget.style.color = '#2a2a2a'}
+                className="text-xs"
+                style={{ color: '#a8a49e' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#0f0e0c'}
+                onMouseLeave={e => e.currentTarget.style.color = '#a8a49e'}
               >
                 Clear
               </button>

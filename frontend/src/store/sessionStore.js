@@ -41,6 +41,7 @@ export const useSessionStore = create((set, get) => ({
       currentQuestion: question,
       currentQuestionNumber: questionNumber,
       questionCount: questionCount ?? get().questionCount,
+      liveTranscript: '',
     }),
 
   updateLiveTranscript: (text, metrics) =>

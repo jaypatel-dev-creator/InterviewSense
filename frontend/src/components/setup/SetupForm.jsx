@@ -48,7 +48,7 @@ export default function SetupForm() {
   return (
     <div
       className="flex-1 flex flex-col items-center justify-center px-6 py-16 min-h-screen"
-      style={{ backgroundColor: '#0a0a0a' }}
+      style={{ backgroundColor: '#f8f7f4' }}
     >
       {/* Progress */}
       <div className="w-full max-w-xl mb-8">
@@ -57,11 +57,11 @@ export default function SetupForm() {
             <div key={i} className="flex items-center flex-1 last:flex-none">
               <div className="flex items-center gap-2.5 flex-shrink-0">
                 <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300"
+                  className="w-7 h-7 flex items-center justify-center text-xs font-semibold"
                   style={{
-                    backgroundColor: i < step ? '#3b82f6' : i === step ? '#3b82f6' : '#141414',
-                    border: `1px solid ${i <= step ? '#3b82f6' : '#222'}`,
-                    color: i <= step ? '#fff' : '#333',
+                    backgroundColor: i < step ? '#c84b1a' : i === step ? '#c84b1a' : '#ffffff',
+                    border: `1px solid ${i <= step ? '#c84b1a' : '#e2e0db'}`,
+                    color: i <= step ? '#fff' : '#a8a49e',
                   }}
                 >
                   {i < step ? (
@@ -72,15 +72,15 @@ export default function SetupForm() {
                 </div>
                 <span
                   className="text-xs font-medium"
-                  style={{ color: i <= step ? '#94a3b8' : '#333' }}
+                  style={{ color: i <= step ? '#0f0e0c' : '#a8a49e' }}
                 >
                   {label}
                 </span>
               </div>
               {i < STEP_LABELS.length - 1 && (
                 <div
-                  className="flex-1 h-px mx-4 transition-all duration-500"
-                  style={{ backgroundColor: i < step ? '#3b82f6' : '#1a1a1a' }}
+                  className="flex-1 h-px mx-4"
+                  style={{ backgroundColor: i < step ? '#c84b1a' : '#e2e0db' }}
                 />
               )}
             </div>
@@ -90,10 +90,10 @@ export default function SetupForm() {
 
       {/* Card */}
       <div
-        className="w-full max-w-xl rounded-2xl"
+        className="w-full max-w-xl"
         style={{
-          backgroundColor: '#111111',
-          border: '1px solid #1a1a1a',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e0db',
         }}
       >
         {/* Step content */}
@@ -103,17 +103,17 @@ export default function SetupForm() {
           {step === 0 && (
             <div className="space-y-7">
               <div className="space-y-1.5">
-                <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#f1f5f9' }}>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#0f0e0c' }}>
                   What are you practicing?
                 </h1>
-                <p className="text-sm leading-relaxed" style={{ color: '#444' }}>
+                <p className="text-sm leading-relaxed" style={{ color: '#6b6860' }}>
                   Pick a domain and InterviewSense will generate targeted questions.
                 </p>
               </div>
 
               {/* Name */}
               <div className="space-y-2">
-                <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#333' }}>
+                <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#a8a49e' }}>
                   Your name (optional)
                 </label>
                 <input
@@ -121,15 +121,15 @@ export default function SetupForm() {
                   placeholder="Jay"
                   value={form.candidateName}
                   onChange={(e) => setForm({ ...form, candidateName: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl text-sm"
+                  className="w-full px-4 py-3 text-sm"
                   style={{
-                    backgroundColor: '#0d0d0d',
-                    border: '1px solid #1a1a1a',
-                    color: '#f1f5f9',
+                    backgroundColor: '#f8f7f4',
+                    border: '1px solid #e2e0db',
+                    color: '#0f0e0c',
                     outline: 'none',
                   }}
-                  onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={e => e.target.style.borderColor = '#1a1a1a'}
+                  onFocus={e => e.target.style.borderColor = '#c84b1a'}
+                  onBlur={e => e.target.style.borderColor = '#e2e0db'}
                 />
               </div>
 
@@ -144,17 +144,17 @@ export default function SetupForm() {
           {step === 1 && (
             <div className="space-y-8">
               <div className="space-y-1.5">
-                <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#f1f5f9' }}>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#0f0e0c' }}>
                   Configure your session
                 </h1>
-                <p className="text-sm" style={{ color: '#444' }}>
+                <p className="text-sm" style={{ color: '#6b6860' }}>
                   Set difficulty and how many questions you want.
                 </p>
               </div>
 
               {/* Difficulty */}
               <div className="space-y-3">
-                <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#333' }}>
+                <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#a8a49e' }}>
                   Difficulty
                 </label>
                 <div className="space-y-2">
@@ -162,24 +162,24 @@ export default function SetupForm() {
                     <button
                       key={d.value}
                       onClick={() => setForm({ ...form, difficulty: d.value })}
-                      className="w-full px-5 py-4 rounded-xl text-left transition-all"
+                      className="w-full px-5 py-4 text-left"
                       style={{
-                        backgroundColor: form.difficulty === d.value ? 'rgba(59,130,246,0.07)' : '#0d0d0d',
-                        border: `1px solid ${form.difficulty === d.value ? '#3b82f6' : '#2a2a2a'}`,
+                        backgroundColor: form.difficulty === d.value ? 'rgba(200,75,26,0.05)' : '#f8f7f4',
+                        border: `1px solid ${form.difficulty === d.value ? '#c84b1a' : '#e2e0db'}`,
                       }}
                     >
                       <div className="flex items-center justify-between">
                         <span
                           className="text-sm font-medium"
-                          style={{ color: form.difficulty === d.value ? '#60a5fa' : '#94a3b8' }}
+                          style={{ color: form.difficulty === d.value ? '#c84b1a' : '#0f0e0c' }}
                         >
                           {d.label}
                         </span>
                         {form.difficulty === d.value && (
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+                          <div className="w-1.5 h-1.5" style={{ backgroundColor: '#c84b1a' }} />
                         )}
                       </div>
-                      <span className="text-xs mt-1 block" style={{ color: '#333' }}>
+                      <span className="text-xs mt-1 block" style={{ color: '#a8a49e' }}>
                         {d.desc}
                       </span>
                     </button>
@@ -189,7 +189,7 @@ export default function SetupForm() {
 
               {/* Question Count */}
               <div className="space-y-3">
-                <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#333' }}>
+                <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#a8a49e' }}>
                   Number of questions
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -197,15 +197,15 @@ export default function SetupForm() {
                     <button
                       key={n}
                       onClick={() => setForm({ ...form, questionCount: n })}
-                      className="py-4 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1"
+                      className="py-4 text-sm font-semibold flex flex-col items-center gap-1"
                       style={{
-                        backgroundColor: form.questionCount === n ? 'rgba(59,130,246,0.07)' : '#111118',
-                        border: `1px solid ${form.questionCount === n ? '#3b82f6' : '#1a1a1a'}`,
-                        color: form.questionCount === n ? '#60a5fa' : '#444',
+                        backgroundColor: form.questionCount === n ? 'rgba(200,75,26,0.05)' : '#f8f7f4',
+                        border: `1px solid ${form.questionCount === n ? '#c84b1a' : '#e2e0db'}`,
+                        color: form.questionCount === n ? '#c84b1a' : '#6b6860',
                       }}
                     >
                       <span className="text-lg font-bold">{n}</span>
-                      <span className="text-xs" style={{ color: '#333' }}>
+                      <span className="text-xs" style={{ color: '#a8a49e' }}>
                         {n === 5 && '~10 min'}
                         {n === 8 && '~20 min'}
                         {n === 10 && '~25 min'}
@@ -221,10 +221,10 @@ export default function SetupForm() {
           {step === 2 && (
             <div className="space-y-7">
               <div className="space-y-1.5">
-                <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#f1f5f9' }}>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#0f0e0c' }}>
                   Targeting a specific role?
                 </h1>
-                <p className="text-sm leading-relaxed" style={{ color: '#444' }}>
+                <p className="text-sm leading-relaxed" style={{ color: '#6b6860' }}>
                   Paste the job description and every question will be targeted to that role.
                   Skip if you want general practice.
                 </p>
@@ -237,8 +237,8 @@ export default function SetupForm() {
 
               {/* Skip hint */}
               <div
-                className="rounded-xl px-4 py-3 text-xs"
-                style={{ backgroundColor: '#0d0d0d', border: '1px solid #1a1a1a', color: '#333' }}
+                className="px-4 py-3 text-xs"
+                style={{ backgroundColor: '#f8f7f4', border: '1px solid #e2e0db', color: '#a8a49e' }}
               >
                 No JD? No problem — InterviewSense will generate questions from the full topic pool for your selected domain.
               </div>
@@ -249,24 +249,24 @@ export default function SetupForm() {
         {/* Navigation — pinned to card bottom */}
         <div
           className="px-8 py-5 flex items-center justify-between border-t"
-          style={{ borderColor: '#1a1a1a' }}
+          style={{ borderColor: '#e2e0db' }}
         >
           {step > 0 ? (
             <button
               onClick={handleBack}
-              className="text-sm px-5 py-2.5 rounded-xl transition-all"
+              className="text-sm px-5 py-2.5"
               style={{
-                color: '#444',
-                border: '1px solid #1a1a1a',
+                color: '#6b6860',
+                border: '1px solid #e2e0db',
                 backgroundColor: 'transparent',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#2a2a2a'
-                e.currentTarget.style.color = '#94a3b8'
+                e.currentTarget.style.borderColor = '#0f0e0c'
+                e.currentTarget.style.color = '#0f0e0c'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#1a1a1a'
-                e.currentTarget.style.color = '#444'
+                e.currentTarget.style.borderColor = '#e2e0db'
+                e.currentTarget.style.color = '#6b6860'
               }}
             >
               Back
@@ -280,10 +280,10 @@ export default function SetupForm() {
               <button
                 onClick={handleSubmit}
                 disabled={isProcessing}
-                className="text-sm transition-colors"
-                style={{ color: '#333' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#555'}
-                onMouseLeave={e => e.currentTarget.style.color = '#333'}
+                className="text-sm"
+                style={{ color: '#a8a49e' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#6b6860'}
+                onMouseLeave={e => e.currentTarget.style.color = '#a8a49e'}
               >
                 Skip
               </button>
@@ -293,10 +293,10 @@ export default function SetupForm() {
               <button
                 onClick={handleNext}
                 disabled={!canProceed()}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                className="px-6 py-2.5 text-sm font-semibold"
                 style={{
-                  backgroundColor: canProceed() ? '#3b82f6' : '#141414',
-                  color: canProceed() ? '#fff' : '#333',
+                  backgroundColor: canProceed() ? '#c84b1a' : '#e2e0db',
+                  color: canProceed() ? '#fff' : '#a8a49e',
                   cursor: canProceed() ? 'pointer' : 'not-allowed',
                 }}
               >
@@ -306,10 +306,10 @@ export default function SetupForm() {
               <button
                 onClick={handleSubmit}
                 disabled={isProcessing}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                className="px-6 py-2.5 text-sm font-semibold"
                 style={{
-                  backgroundColor: isProcessing ? '#141414' : '#3b82f6',
-                  color: isProcessing ? '#333' : '#fff',
+                  backgroundColor: isProcessing ? '#e2e0db' : '#c84b1a',
+                  color: isProcessing ? '#a8a49e' : '#fff',
                   cursor: isProcessing ? 'not-allowed' : 'pointer',
                 }}
               >

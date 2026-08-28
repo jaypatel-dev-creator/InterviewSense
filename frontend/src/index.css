@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0a;
-  --color-surface: #111111;
-  --color-border: #1a1a1a;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-text-primary: #f1f5f9;
-  --color-text-muted: #555555;
-  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --color-background: #f8f7f4;
+  --color-surface: #ffffff;
+  --color-border: #e2e0db;
+  --color-accent: #c84b1a;
+  --color-accent-hover: #a83d14;
+  --color-text-primary: #0f0e0c;
+  --color-text-muted: #6b6860;
+  --font-family-sans: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-family-mono: 'JetBrains Mono', monospace;
 }
 
@@ -20,9 +20,9 @@
 
 html, body, #root {
   height: 100%;
-  background-color: #0a0a0a;
-  color: #f1f5f9;
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #f8f7f4;
+  color: #0f0e0c;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -35,29 +35,29 @@ html, body, #root {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1a1a1a;
+  background: #d4d2cd;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a2a2a;
+  background: #b8b6b1;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(59, 130, 246, 0.2);
-  color: #f1f5f9;
+  background: rgba(200, 75, 26, 0.12);
+  color: #0f0e0c;
 }
 
 /* Focus */
 :focus-visible {
-  outline: 1px solid #3b82f6;
+  outline: 1px solid #c84b1a;
   outline-offset: 2px;
 }
 
 /* Inputs */
 input::placeholder,
 textarea::placeholder {
-  color: #475569;
+  color: #a8a49e;
 }
 
 /* Reduced motion */

@@ -13,28 +13,28 @@ export default function LiveTranscript({ transcript }) {
 
   return (
     <div
-      className="rounded-xl px-4 py-4 space-y-2"
-      style={{ backgroundColor: '#111118', border: '1px solid #1e1e2e' }}
+      className="px-4 py-4 space-y-2"
+      style={{ backgroundColor: '#ffffff', border: '1px solid #e2e0db' }}
     >
       <div className="flex items-center gap-2">
         <div
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: '#3b82f6' }}
+          className="w-1.5 h-1.5"
+          style={{ backgroundColor: '#c84b1a' }}
         />
-        <span className="text-xs font-medium" style={{ color: '#64748b' }}>
+        <span className="text-xs font-medium" style={{ color: '#a8a49e' }}>
           Live transcript
         </span>
       </div>
       <div
         ref={ref}
         className="text-sm leading-relaxed max-h-24 overflow-y-auto"
-        style={{ color: '#94a3b8', fontFamily: "'JetBrains Mono', monospace" }}
+        style={{ color: '#6b6860', fontFamily: "'JetBrains Mono', monospace" }}
       >
         {transcript}
         <span
           className="inline-block w-0.5 h-4 ml-0.5 align-middle"
           style={{
-            backgroundColor: '#3b82f6',
+            backgroundColor: '#c84b1a',
             animation: 'blink 1s step-end infinite',
           }}
         />

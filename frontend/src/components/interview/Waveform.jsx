@@ -22,12 +22,12 @@ export default function Waveform({ volume, isRecording }) {
 
       barsRef.current.forEach((v, i) => {
         const barHeight = Math.max(2, v * height * 3)
-        const alpha = isRecording ? 0.4 + (i / barsRef.current.length) * 0.6 : 0.15
+        const alpha = isRecording ? 0.3 + (i / barsRef.current.length) * 0.7 : 1
         const x = i * barWidth
 
         ctx.fillStyle = isRecording
-          ? `rgba(59, 130, 246, ${alpha})`
-          : `rgba(30, 30, 46, 0.8)`
+          ? `rgba(200, 75, 26, ${alpha})`
+          : `rgba(226, 224, 219, 1)`
 
         ctx.beginPath()
         ctx.roundRect(
@@ -61,11 +61,11 @@ export default function Waveform({ volume, isRecording }) {
 
   return (
     <div
-      className="w-full rounded-xl overflow-hidden"
+      className="w-full overflow-hidden"
       style={{
         height: '80px',
-        backgroundColor: '#111118',
-        border: '1px solid #1e1e2e',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e2e0db',
       }}
     >
       <canvas ref={canvasRef} className="w-full h-full" />

@@ -74,7 +74,7 @@ export default function DomainSelector({ value, onChange }) {
     <div className="space-y-3">
       <label
         className="text-xs font-medium uppercase tracking-wider"
-        style={{ color: '#555' }}
+        style={{ color: '#a8a49e' }}
       >
         Domain
       </label>
@@ -85,25 +85,25 @@ export default function DomainSelector({ value, onChange }) {
             <button
               key={d.value}
               onClick={() => onChange(d.value)}
-              className="w-full px-4 py-3.5 rounded-xl text-left transition-all flex items-center gap-4"
+              className="w-full px-4 py-3.5 text-left flex items-center gap-4"
               style={{
-                backgroundColor: selected ? 'rgba(59,130,246,0.08)' : '#0a0a0a',
-                border: `1px solid ${selected ? '#3b82f6' : '#1e1e1e'}`,
+                backgroundColor: selected ? 'rgba(200,75,26,0.05)' : '#f8f7f4',
+                border: `1px solid ${selected ? '#c84b1a' : '#e2e0db'}`,
               }}
               onMouseEnter={e => {
-                if (!selected) e.currentTarget.style.borderColor = '#2a2a2a'
+                if (!selected) e.currentTarget.style.borderColor = '#0f0e0c'
               }}
               onMouseLeave={e => {
-                if (!selected) e.currentTarget.style.borderColor = '#1e1e1e'
+                if (!selected) e.currentTarget.style.borderColor = '#e2e0db'
               }}
             >
               {/* Icon */}
               <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                className="w-9 h-9 flex items-center justify-center flex-shrink-0"
                 style={{
-                  backgroundColor: selected ? 'rgba(59,130,246,0.15)' : '#141414',
-                  color: selected ? '#3b82f6' : '#404040',
-                  border: `1px solid ${selected ? 'rgba(59,130,246,0.3)' : '#1e1e1e'}`,
+                  backgroundColor: selected ? 'rgba(200,75,26,0.1)' : '#ffffff',
+                  color: selected ? '#c84b1a' : '#a8a49e',
+                  border: `1px solid ${selected ? 'rgba(200,75,26,0.3)' : '#e2e0db'}`,
                 }}
               >
                 {d.icon}
@@ -113,11 +113,11 @@ export default function DomainSelector({ value, onChange }) {
               <div className="flex-1 min-w-0">
                 <span
                   className="text-sm font-medium block"
-                  style={{ color: selected ? '#f1f5f9' : '#94a3b8' }}
+                  style={{ color: selected ? '#c84b1a' : '#0f0e0c' }}
                 >
                   {d.label}
                 </span>
-                <span className="text-xs" style={{ color: '#404040' }}>
+                <span className="text-xs" style={{ color: '#a8a49e' }}>
                   {d.description}
                 </span>
               </div>
@@ -125,8 +125,8 @@ export default function DomainSelector({ value, onChange }) {
               {/* Selected indicator */}
               {selected && (
                 <div
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: '#3b82f6' }}
+                  className="w-1.5 h-1.5 flex-shrink-0"
+                  style={{ backgroundColor: '#c84b1a' }}
                 />
               )}
             </button>

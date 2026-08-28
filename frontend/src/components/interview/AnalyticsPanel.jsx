@@ -1,23 +1,23 @@
-function MetricRow({ label, value, unit = '', max = 100, color = '#3b82f6' }) {
+function MetricRow({ label, value, unit = '', max = 100, color = '#c84b1a' }) {
   const pct = Math.min(100, (value / max) * 100)
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: '#64748b' }}>{label}</span>
+        <span className="text-xs" style={{ color: '#6b6860' }}>{label}</span>
         <span
           className="text-xs font-mono font-medium"
-          style={{ color: '#94a3b8' }}
+          style={{ color: '#0f0e0c' }}
         >
           {typeof value === 'number' ? value.toFixed(1) : '—'}{unit}
         </span>
       </div>
       <div
-        className="h-1 rounded-full overflow-hidden"
-        style={{ backgroundColor: '#1e1e2e' }}
+        className="h-px overflow-hidden"
+        style={{ backgroundColor: '#e2e0db' }}
       >
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full"
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
@@ -29,35 +29,35 @@ function MetricRow({ label, value, unit = '', max = 100, color = '#3b82f6' }) {
 // Ideal interview pace: 120–160 wpm. Mirrors _compute_pacing_score on backend.
 function PacingBadge({ wpm }) {
   if (!wpm || wpm === 0) return (
-    <span className="text-xs font-mono" style={{ color: '#64748b' }}>—</span>
+    <span className="text-xs font-mono" style={{ color: '#a8a49e' }}>—</span>
   )
 
   let label, color
   if (wpm < 100) {
     label = 'Too slow'
-    color = '#f59e0b'
+    color = '#d97706'
   } else if (wpm < 120) {
     label = 'A bit slow'
-    color = '#fbbf24'
+    color = '#d97706'
   } else if (wpm <= 160) {
     label = 'Good pace'
-    color = '#22c55e'
+    color = '#16a34a'
   } else if (wpm <= 190) {
     label = 'A bit fast'
-    color = '#fbbf24'
+    color = '#d97706'
   } else {
     label = 'Too fast'
-    color = '#ef4444'
+    color = '#dc2626'
   }
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
+      <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
         {wpm.toFixed(0)} wpm
       </span>
       <span
-        className="text-xs font-medium px-1.5 py-0.5 rounded"
-        style={{ color, backgroundColor: `${color}18` }}
+        className="text-xs font-medium px-1.5 py-0.5"
+        style={{ color, backgroundColor: `${color}14`, border: `1px solid ${color}30` }}
       >
         {label}
       </span>
@@ -70,16 +70,16 @@ function EvaluationBlock({ evaluation }) {
 
   return (
     <div
-      className="rounded-lg p-3 space-y-3"
-      style={{ backgroundColor: '#0a0a0f', border: '1px solid #1e1e2e' }}
+      className="p-3 space-y-3"
+      style={{ backgroundColor: '#f8f7f4', border: '1px solid #e2e0db' }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium" style={{ color: '#94a3b8' }}>
+        <span className="text-xs font-medium" style={{ color: '#6b6860' }}>
           Last answer
         </span>
         <span
           className="text-sm font-semibold font-mono"
-          style={{ color: '#3b82f6' }}
+          style={{ color: '#c84b1a' }}
         >
           {evaluation.correctness_score?.toFixed(1)}/10
         </span>
@@ -87,11 +87,11 @@ function EvaluationBlock({ evaluation }) {
 
       {evaluation.strengths?.length > 0 && (
         <div className="space-y-1">
-          <span className="text-xs" style={{ color: '#64748b' }}>Strengths</span>
+          <span className="text-xs" style={{ color: '#a8a49e' }}>Strengths</span>
           {evaluation.strengths.slice(0, 2).map((s, i) => (
             <div key={i} className="flex items-start gap-1.5">
-              <span style={{ color: '#22c55e', fontSize: '10px', marginTop: '2px' }}>✓</span>
-              <span className="text-xs" style={{ color: '#86efac' }}>{s}</span>
+              <span style={{ color: '#16a34a', fontSize: '10px', marginTop: '2px' }}>✓</span>
+              <span className="text-xs" style={{ color: '#16a34a' }}>{s}</span>
             </div>
           ))}
         </div>
@@ -99,11 +99,11 @@ function EvaluationBlock({ evaluation }) {
 
       {evaluation.missing_concepts?.length > 0 && (
         <div className="space-y-1">
-          <span className="text-xs" style={{ color: '#64748b' }}>Missed</span>
+          <span className="text-xs" style={{ color: '#a8a49e' }}>Missed</span>
           {evaluation.missing_concepts.slice(0, 2).map((m, i) => (
             <div key={i} className="flex items-start gap-1.5">
-              <span style={{ color: '#f59e0b', fontSize: '10px', marginTop: '2px' }}>○</span>
-              <span className="text-xs" style={{ color: '#fcd34d' }}>{m}</span>
+              <span style={{ color: '#d97706', fontSize: '10px', marginTop: '2px' }}>○</span>
+              <span className="text-xs" style={{ color: '#d97706' }}>{m}</span>
             </div>
           ))}
         </div>
@@ -114,8 +114,8 @@ function EvaluationBlock({ evaluation }) {
 
 export default function AnalyticsPanel({ metrics, evaluation }) {
   return (
-    <div className="p-6 space-y-6 h-full overflow-y-auto">
-      <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
+    <div className="p-6 space-y-6 h-full overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+      <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#a8a49e' }}>
         Speech Analytics
       </h3>
 
@@ -123,22 +123,22 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
         {/* Pacing — WPM bar + Slow/Good/Fast label */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs" style={{ color: '#64748b' }}>Pacing</span>
+            <span className="text-xs" style={{ color: '#6b6860' }}>Pacing</span>
             <PacingBadge wpm={metrics?.wpm ?? 0} />
           </div>
           <div
-            className="h-1 rounded-full overflow-hidden"
-            style={{ backgroundColor: '#1e1e2e' }}
+            className="h-px overflow-hidden"
+            style={{ backgroundColor: '#e2e0db' }}
           >
             <div
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full"
               style={{
                 width: `${Math.min(100, ((metrics?.wpm ?? 0) / 220) * 100)}%`,
                 backgroundColor: (() => {
                   const wpm = metrics?.wpm ?? 0
-                  if (wpm >= 120 && wpm <= 160) return '#22c55e'
-                  if (wpm >= 100 && wpm <= 190) return '#fbbf24'
-                  return '#ef4444'
+                  if (wpm >= 120 && wpm <= 160) return '#16a34a'
+                  if (wpm >= 100 && wpm <= 190) return '#d97706'
+                  return '#dc2626'
                 })(),
               }}
             />
@@ -150,14 +150,14 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
           value={(metrics?.energy_level ?? 0) * 1000}
           unit=""
           max={100}
-          color="#a78bfa"
+          color="#6b6860"
         />
         <MetricRow
           label="Pitch variation"
           value={metrics?.pitch_variation ?? 0}
           unit=" Hz"
           max={500}
-          color="#f59e0b"
+          color="#a8a49e"
         />
         {/* pitch_variation = std dev of F0 via librosa yin — measures vocal expressiveness.
             Low = monotone delivery. High = engaged, expressive speaker.
@@ -166,20 +166,20 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: '#64748b' }}>Pauses</span>
-          <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
+          <span className="text-xs" style={{ color: '#6b6860' }}>Pauses</span>
+          <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
             {metrics?.pause_count ?? '—'}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: '#64748b' }}>Filler words</span>
-          <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
+          <span className="text-xs" style={{ color: '#6b6860' }}>Filler words</span>
+          <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
             {metrics?.filler_word_count ?? '—'}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: '#64748b' }}>Duration</span>
-          <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>
+          <span className="text-xs" style={{ color: '#6b6860' }}>Duration</span>
+          <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
             {metrics?.answer_duration_seconds
               ? `${metrics.answer_duration_seconds.toFixed(1)}s`
               : '—'}
@@ -187,16 +187,16 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
         </div>
       </div>
 
-      <div className="pt-2 border-t" style={{ borderColor: '#1e1e2e' }}>
+      <div className="pt-2 border-t" style={{ borderColor: '#e2e0db' }}>
         <h3
           className="text-xs font-semibold uppercase tracking-wider mb-4"
-          style={{ color: '#64748b' }}
+          style={{ color: '#a8a49e' }}
         >
           Evaluation
         </h3>
         <EvaluationBlock evaluation={evaluation} />
         {!evaluation && (
-          <p className="text-xs" style={{ color: '#64748b' }}>
+          <p className="text-xs" style={{ color: '#a8a49e' }}>
             Evaluation appears after your first answer.
           </p>
         )}

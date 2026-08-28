@@ -49,27 +49,28 @@ export default function SessionHistory({ isOpen, onClose }) {
       {isOpen && (
         <div
           className="fixed inset-0 z-10"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          style={{ backgroundColor: 'rgba(15,14,12,0.3)' }}
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className="fixed top-0 left-0 h-full z-20 flex flex-col transition-transform duration-300"
+        className="fixed top-0 left-0 h-full z-20 flex flex-col"
         style={{
-          width: '320px',
-          backgroundColor: '#111118',
-          borderRight: '1px solid #1e1e2e',
+          width: '300px',
+          backgroundColor: '#ffffff',
+          borderRight: '1px solid #e2e0db',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.25s ease',
         }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: '#1e1e2e' }}
+          style={{ borderColor: '#e2e0db' }}
         >
-          <h2 className="text-sm font-semibold" style={{ color: '#f1f5f9' }}>
+          <h2 className="text-sm font-semibold" style={{ color: '#0f0e0c' }}>
             Session History
           </h2>
           <div className="flex items-center gap-2">
@@ -77,10 +78,10 @@ export default function SessionHistory({ isOpen, onClose }) {
               <button
                 onClick={handleClearAll}
                 disabled={clearingAll}
-                className="text-xs px-2 py-1 rounded transition-colors"
+                className="text-xs px-2 py-1"
                 style={{
-                  color: confirmClearAll ? '#fca5a5' : '#64748b',
-                  border: `1px solid ${confirmClearAll ? '#ef4444' : 'transparent'}`,
+                  color: confirmClearAll ? '#dc2626' : '#a8a49e',
+                  border: `1px solid ${confirmClearAll ? 'rgba(220,38,38,0.3)' : 'transparent'}`,
                   opacity: clearingAll ? 0.5 : 1,
                 }}
               >
@@ -89,10 +90,10 @@ export default function SessionHistory({ isOpen, onClose }) {
             )}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md transition-colors"
-              style={{ color: '#64748b' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
-              onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+              className="p-1.5"
+              style={{ color: '#a8a49e' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#0f0e0c'}
+              onMouseLeave={e => e.currentTarget.style.color = '#a8a49e'}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -105,14 +106,14 @@ export default function SessionHistory({ isOpen, onClose }) {
         {/* Sessions List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {loading && (
-            <p className="text-xs text-center py-8" style={{ color: '#64748b' }}>
+            <p className="text-xs text-center py-8" style={{ color: '#a8a49e' }}>
               Loading sessions...
             </p>
           )}
           {!loading && sessions.length === 0 && (
             <div className="text-center py-12 space-y-2">
-              <p className="text-sm" style={{ color: '#64748b' }}>No sessions yet</p>
-              <p className="text-xs" style={{ color: '#64748b' }}>
+              <p className="text-sm" style={{ color: '#6b6860' }}>No sessions yet</p>
+              <p className="text-xs" style={{ color: '#a8a49e' }}>
                 Start your first interview to see history here.
               </p>
             </div>
