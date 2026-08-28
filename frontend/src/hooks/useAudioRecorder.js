@@ -2,8 +2,8 @@ import { useRef, useCallback, useEffect } from 'react'
 import { useUIStore } from '../store/uiStore'
 
 const SAMPLE_RATE = 16000
-const SILENCE_THRESHOLD = 0.02
-const SILENCE_DURATION_MS = 3000
+const SILENCE_THRESHOLD = 0.04   // was 0.02
+const SILENCE_DURATION_MS = 2500  // was 3000
 const MIN_AUDIO_SECONDS = 2.0
 const MIN_ENERGY = 0.005  // ambient noise is ~0.001-0.003, real speech is ~0.01+
 

@@ -38,7 +38,7 @@ Include:
 2. Top 3 weak topics with specific explanation of what was missing
 3. Top 2 strengths to build on
 4. Concrete study recommendations for each weak topic (specific resources, concepts to review)
-5. Communication and delivery feedback based on speech scores
+5. Communication and delivery feedback. The computed communication score is {avg_speech_score:.1f}/10 — reference this exact number, do not invent a different score.
 6. One specific goal for their next mock interview
 
 Tone: Direct, constructive, like a senior engineer giving real feedback.
