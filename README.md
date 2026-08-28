@@ -18,7 +18,7 @@ A voice-native AI interview coach that simulates real technical interviews end-t
 InterviewSense conducts a complete mock technical interview using your microphone as primary source or text input as a fallback, then evaluates your performance across three dimensions:
 
 - **Technical accuracy** — per-question correctness scored by an LLM evaluator
-- **Communication** — vocal energy measured via librosa RMS analysis
+- **Communication** — weighted composite of vocal energy, pitch variation, and fluency
 - **Pacing** — words-per-minute benchmarked against the 120–160 wpm ideal range
 
 The evaluator adapts each follow-up question based on a rolling conversation summary — it knows how you answered Q1 when generating Q3, not just what topic was covered.
@@ -103,7 +103,7 @@ Each domain has 24–30 seed topics. Without a JD, questions are drawn from the 
 | Metric | Method | Weight |
 |---|---|---|
 | Technical | LLM correctness score (0–10) per question, averaged over `question_count` (skipped = 0) | 60% |
-| Communication | librosa RMS energy, rescaled to 0–10 (cap: 0.10 RMS = 10) | 25% |
+| Communication | Weighted composite: vocal energy 40% (RMS), pitch variation 30% (F0 std dev), fluency 30% (filler rate) | 25% |
 | Pacing | WPM score: 120–160 wpm = 10, degrades linearly outside range | 15% |
 
 Communication and Pacing show N/A when fewer than half the questions received voice answers. Weights redistribute to Technical only in that case.
@@ -115,7 +115,7 @@ Communication and Pacing show N/A when fewer than half the questions received vo
 ## Known Limitations
 
 **1. Communication score accuracy — laptop microphone**
-Communication score is derived from microphone RMS energy level, rescaled to 0–10. Laptop integrated mics produce significantly lower energy readings than headset or external mics — a normal conversational voice through a laptop mic typically maps to 3–5/10 regardless of actual delivery quality. This is a hardware constraint, not a scoring bug. For accurate communication scoring, use a headset or external microphone.
+Communication score is a weighted composite of vocal energy (40%), pitch variation (30%), and fluency/filler rate (30%). Laptop integrated mics produce lower RMS energy readings than headset or external mics — the energy component will read low, but pitch variation and fluency scores are hardware-independent and help balance the overall communication score. For best results, use a headset or external microphone.
 
 **2. Live transcript is chunk-based, not word-by-word**
 The transcript pipeline sends audio chunks to Groq Whisper for transcription after speech is detected. The transcript appears all at once after you finish speaking — not incrementally word by word. True real-time word-level updates would require switching to a streaming STT provider (e.g. Deepgram) with zero backend architectural changes — Groq Whisper's API does not support streaming transcription.
@@ -164,7 +164,7 @@ InterviewSense/
 │   ├── domains/         # Seed topics per domain
 │   ├── prompts/         # LLM prompt builders
 │   ├── schemas/         # Pydantic schemas
-│   └── services/        # External API client singletons (ElevenLabs)
+│   └── services/        # External API client singletons (ElevenLabs, session logic)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/  # Interview, report, setup, history UI

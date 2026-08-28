@@ -125,8 +125,7 @@ Binary WebSocket frame (Float32Array)
                     ├── Pause count    — gaps > 0.5s between words
                     ├── Filler words   — matched against FILLER_WORDS set
                     ├── Energy level   — RMS via librosa
-                    ├── Pitch variation — F0 via librosa yin
-                    ├── Silence ratio  — frames below energy threshold
+                    ├── Pitch variation — F0 via librosa yin (85–300 Hz range)
                     └── Answer duration — chunk length / sample rate
 ```
 
@@ -167,8 +166,11 @@ Domain and difficulty are validated before the connection is accepted — invali
 # Technical — averaged over question_count (skipped = 0, not excluded)
 avg_technical = sum(correctness_scores) / question_count
 
-# Communication — librosa RMS rescaled to 0–10
-score = min(10.0, (energy_level / 0.10) * 10.0)
+# Communication — weighted composite of three paralinguistic signals
+energy_score  = min(10.0, (energy_level / 0.10) * 10.0)      # 40%
+pitch_score   = min(10.0, (pitch_variation / 60.0) * 10.0)   # 30% — F0 std dev, 85-300 Hz filtered
+fluency_score = max(0.0, 10.0 - (filler_count / word_count) * 20.0)  # 30%
+communication = energy_score * 0.40 + pitch_score * 0.30 + fluency_score * 0.30
 
 # Pacing — WPM benchmarked against 120–160 wpm ideal
 if 120 <= wpm <= 160: score = 10.0
@@ -261,7 +263,7 @@ backend/
 │   └── state.py              # SessionState + Turn TypedDicts
 ├── api/
 │   ├── routes.py             # REST endpoints
-│   └── websocket.py          # WebSocket handler + _finalize_session
+│   └── websocket.py          # WebSocket protocol handler — message routing only
 ├── audio/
 │   ├── analyzer.py           # librosa feature extraction
 │   ├── processor.py          # Parallel Whisper + librosa (ThreadPoolExecutor)
@@ -286,7 +288,8 @@ backend/
 │   ├── session.py            # SessionResponse schema
 │   └── turn.py               # TurnResponse + SpeechMetrics schemas
 ├── services/
-│   └── elevenlabs.py         # ElevenLabs async client singleton
+│   ├── elevenlabs.py         # ElevenLabs async client singleton
+│   └── session_service.py    # Session business logic — scoring, finalization, JD extraction
 ├── main.py                   # App factory, lifespan, startup
 ├── requirements.txt
 └── .env.example
