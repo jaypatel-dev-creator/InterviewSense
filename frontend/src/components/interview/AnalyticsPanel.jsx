@@ -113,6 +113,20 @@ function EvaluationBlock({ evaluation }) {
 }
 
 export default function AnalyticsPanel({ metrics, evaluation }) {
+  // Filler rate — filler_word_count as % of total words, for bar display.
+  // Mirrors backend formula: 0% = clean, 5% = noticeable, 10%+ = damaging.
+  const wpm = metrics?.wpm ?? 0
+  const duration = metrics?.answer_duration_seconds ?? 0
+  const totalWords = wpm > 0 && duration > 0 ? Math.max(1, Math.round((wpm / 60) * duration)) : 1
+  const fillerCount = metrics?.filler_word_count ?? 0
+  const fillerRatePct = Math.min(100, (fillerCount / totalWords) * 100)
+  const fillerColor = fillerRatePct <= 2 ? '#16a34a' : fillerRatePct <= 5 ? '#d97706' : '#dc2626'
+
+  // Pause bar — max meaningful display at 7 pauses (maps to score 0 on backend).
+  const pauseCount = metrics?.pause_count ?? 0
+  const pauseBarPct = Math.min(100, (pauseCount / 7) * 100)
+  const pauseColor = pauseCount <= 1 ? '#16a34a' : pauseCount <= 3 ? '#d97706' : '#dc2626'
+
   return (
     <div className="p-6 space-y-6 h-full overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
       <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#a8a49e' }}>
@@ -124,7 +138,7 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: '#6b6860' }}>Pacing</span>
-            <PacingBadge wpm={metrics?.wpm ?? 0} />
+            <PacingBadge wpm={wpm} />
           </div>
           <div
             className="h-px overflow-hidden"
@@ -133,9 +147,8 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
             <div
               className="h-full"
               style={{
-                width: `${Math.min(100, ((metrics?.wpm ?? 0) / 220) * 100)}%`,
+                width: `${Math.min(100, (wpm / 220) * 100)}%`,
                 backgroundColor: (() => {
-                  const wpm = metrics?.wpm ?? 0
                   if (wpm >= 120 && wpm <= 160) return '#16a34a'
                   if (wpm >= 100 && wpm <= 190) return '#d97706'
                   return '#dc2626'
@@ -145,36 +158,44 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
           </div>
         </div>
 
-        <MetricRow
-          label="Energy level"
-          value={(metrics?.energy_level ?? 0) * 1000}
-          unit=""
-          max={100}
-          color="#6b6860"
-        />
-        <MetricRow
-          label="Pitch variation"
-          value={metrics?.pitch_variation ?? 0}
-          unit=" Hz"
-          max={500}
-          color="#a8a49e"
-        />
-        {/* pitch_variation = std dev of F0 via librosa yin — measures vocal expressiveness.
-            Low = monotone delivery. High = engaged, expressive speaker.
-            silence_ratio removed — always 0 with browser-side VAD architecture. */}
+        {/* Filler rate — replaces energy_level. Bar fills as filler rate rises. */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: '#6b6860' }}>Filler rate</span>
+            <span className="text-xs font-mono font-medium" style={{ color: '#0f0e0c' }}>
+              {fillerCount > 0 ? `${fillerRatePct.toFixed(1)}%` : '—'}
+            </span>
+          </div>
+          <div className="h-px overflow-hidden" style={{ backgroundColor: '#e2e0db' }}>
+            <div className="h-full" style={{ width: `${fillerRatePct}%`, backgroundColor: fillerColor }} />
+          </div>
+        </div>
+
+        {/* Pause bar — replaces pitch_variation. Bar fills as pause count rises. */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: '#6b6860' }}>Long pauses</span>
+            <span className="text-xs font-mono font-medium" style={{ color: '#0f0e0c' }}>
+              {pauseCount > 0 ? pauseCount : '—'}
+            </span>
+          </div>
+          <div className="h-px overflow-hidden" style={{ backgroundColor: '#e2e0db' }}>
+            <div className="h-full" style={{ width: `${pauseBarPct}%`, backgroundColor: pauseColor }} />
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: '#6b6860' }}>Pauses</span>
-          <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
-            {metrics?.pause_count ?? '—'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: '#6b6860' }}>Filler words</span>
           <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
             {metrics?.filler_word_count ?? '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: '#6b6860' }}>Pauses</span>
+          <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
+            {metrics?.pause_count ?? '—'}
           </span>
         </div>
         <div className="flex items-center justify-between">

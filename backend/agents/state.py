@@ -57,3 +57,8 @@ class SessionState(TypedDict):
 
     # Report output — populated by report_generator_node
     improvement_plan_text: str
+
+    # Communication score — computed once in finalize_session() from Whisper-only
+    # fluency metrics (filler rate + pause count) and passed into the graph so
+    # report_generator_node can read it without recomputing.
+    communication_score: float | None

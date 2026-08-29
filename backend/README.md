@@ -25,7 +25,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> No PyTorch installation required. Voice activity detection runs browser-side — the backend has no server-side VAD model dependency.
+> No PyTorch, numba, or signal processing library required. Voice activity detection runs browser-side — the backend has no server-side VAD model dependency. All speech metrics are derived from Groq Whisper word-level timestamps.
 
 ### 3. Configure environment
 
@@ -81,10 +81,10 @@ Graph entry point and validation gate — runs first on every invocation. Fails 
 with AgentException if turns or transcript are missing, so downstream LLM nodes
 (evaluator_router, report_generator) can assume clean state without redundant checks.
 
-Audio processing (Whisper + librosa) intentionally runs pre-graph in the WebSocket
-handler via process_audio_chunk(). This ensures transcript_update reaches the client
+Audio processing (Groq Whisper) intentionally runs pre-graph in the WebSocket
+handler via `process_audio_chunk()`. This ensures `transcript_update` reaches the client
 immediately after the candidate finishes speaking, without waiting for graph invocation
-latency. By the time this node executes, speech_metrics and answer_transcript are
+latency. By the time this node executes, `speech_metrics` and `answer_transcript` are
 already populated in state. Node validates their presence and logs WPM, pauses, and
 filler counts. No LLM call — pure Python.
 
@@ -109,7 +109,7 @@ The conversation summary is a plain-text log of prior Q&A appended after each tu
 | `wrap_up` | Last question — close the session |
 
 **`report_generator_node`**
-Single Gemini call at session end. Receives full turn history, generates a structured improvement plan in plain text: overall summary, top 3 weak topics, top 2 strengths, study recommendations, communication feedback, next mock interview goal.
+Single Gemini call at session end. Reads `communication_score` directly from `SessionState` — computed once in `finalize_session()` and passed into the graph via `graph.ainvoke()`. No score recomputation inside the node. Generates a structured improvement plan in plain text: overall summary, top 3 weak topics, top 2 strengths, study recommendations, communication feedback, next mock interview goal.
 
 ---
 
@@ -118,18 +118,17 @@ Single Gemini call at session end. Receives full turn history, generates a struc
 ```
 Binary WebSocket frame (Float32Array)
     │
-    └── process_audio_chunk()  ─── ThreadPoolExecutor (parallel)
-            ├── Groq Whisper v3 Turbo  — transcription + word timestamps
-            └── librosa signal analysis
-                    ├── WPM            — from word timestamps
-                    ├── Pause count    — gaps > 0.5s between words
-                    ├── Filler words   — matched against FILLER_WORDS set
-                    ├── Energy level   — RMS via librosa
-                    ├── Pitch variation — F0 via librosa yin (85–300 Hz range)
-                    └── Answer duration — chunk length / sample rate
+    └── process_audio_chunk()  ─── ThreadPoolExecutor
+            └── Groq Whisper v3 Turbo  — transcription + word-level timestamps
+                    │
+                    └── extract_speech_features()  — pure Python, no model
+                            ├── WPM            — word count / duration in minutes
+                            ├── Pause count    — gaps > 1.5s between words
+                            ├── Filler words   — matched against FILLER_WORDS set
+                            └── Answer duration — chunk length / sample rate
 ```
 
-Whisper and librosa run concurrently in a `ThreadPoolExecutor`. Voice activity detection runs browser-side in `useAudioRecorder.js` — audio chunks are only sent when speech is detected.
+All speech metrics are derived entirely from Whisper word-level timestamps. No separate audio signal processing library is used. Voice activity detection runs browser-side in `useAudioRecorder.js` — audio chunks are only sent when speech is detected.
 
 ---
 
@@ -166,11 +165,15 @@ Domain and difficulty are validated before the connection is accepted — invali
 # Technical — averaged over question_count (skipped = 0, not excluded)
 avg_technical = sum(correctness_scores) / question_count
 
-# Communication — weighted composite of three paralinguistic signals
-energy_score  = min(10.0, (energy_level / 0.10) * 10.0)      # 40%
-pitch_score   = min(10.0, (pitch_variation / 60.0) * 10.0)   # 30% — F0 std dev, 85-300 Hz filtered
-fluency_score = max(0.0, 10.0 - (filler_count / word_count) * 20.0)  # 30%
-communication = energy_score * 0.40 + pitch_score * 0.30 + fluency_score * 0.30
+# Communication — fluency score from Whisper-derived metrics only
+# Thresholds grounded in speech communication research:
+#   Filler rate: 0% = 10.0, 5% = 5.0, 10%+ = 0.0  (Quantified Communications)
+#   Pauses: 0 long pauses = 10.0, degrades 1.5 pts per pause > 1.5s
+total_words   = max(1, round((wpm / 60) * duration))
+filler_rate   = filler_word_count / total_words
+filler_score  = max(0.0, 10.0 - (filler_rate / 0.05) * 5.0)   # 60% weight
+pause_score   = max(0.0, 10.0 - pause_count * 1.5)             # 40% weight
+communication = round((filler_score * 0.60) + (pause_score * 0.40), 2)
 
 # Pacing — WPM benchmarked against 120–160 wpm ideal
 if 120 <= wpm <= 160: score = 10.0
@@ -194,7 +197,7 @@ When `jd_text` is provided at session start:
 
 1. JD skills are extracted via a Gemini call and stored in `SessionState.jd_skills`
 2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested
-3. Post-session, `_finalize_session` computes coverage:
+3. Post-session, `finalize_session()` computes coverage:
 
 ```python
 jd_coverage = {
@@ -258,15 +261,15 @@ backend/
 │   ├── evaluator_router.py   # Evaluator-Router LangGraph node
 │   ├── llm.py                # Gemini LLM singleton
 │   ├── orchestrator.py       # Graph compilation + get_graph() singleton
-│   ├── report_generator.py   # Report Generator LangGraph node
+│   ├── report_generator.py   # Report Generator LangGraph node — reads communication_score from state
 │   ├── speech_analytics.py   # Speech Analytics LangGraph node
 │   └── state.py              # SessionState + Turn TypedDicts
 ├── api/
 │   ├── routes.py             # REST endpoints
 │   └── websocket.py          # WebSocket protocol handler — message routing only
 ├── audio/
-│   ├── analyzer.py           # librosa feature extraction
-│   ├── processor.py          # Parallel Whisper + librosa (ThreadPoolExecutor)
+│   ├── analyzer.py           # Whisper-derived speech feature extraction (WPM, pauses, fillers)
+│   ├── processor.py          # Groq Whisper transcription + extract_speech_features()
 │   └── transcriber.py        # Groq Whisper client singleton
 ├── core/
 │   ├── config.py             # pydantic-settings, lru_cache singleton

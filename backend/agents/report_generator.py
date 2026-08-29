@@ -11,6 +11,10 @@ async def report_generator_node(state: SessionState) -> dict:
     """
     Report Generator Node — single LLM call at session end.
     Reads full session state, generates written improvement plan.
+
+    communication_score is read directly from state — computed once in
+    finalize_session() via _compute_communication_score() and passed into
+    the graph. No recomputation here, single source of truth.
     """
     logger.debug("Report generator node executing.")
 
@@ -22,16 +26,11 @@ async def report_generator_node(state: SessionState) -> dict:
         for t in turns
         if t.get("correctness_score") is not None
     ]
-
-    energy_scores = [
-        t.get("speech_metrics", {}).get("energy_level", 0.0)
-        for t in turns
-        if t.get("speech_metrics", {}).get("energy_level", 0.0) > 0
-    ]
-
     avg_technical = sum(technical_scores) / len(technical_scores) if technical_scores else 0.0
-    avg_energy_raw = sum(energy_scores) / len(energy_scores) if energy_scores else 0.0
-    avg_speech = min(10.0, (avg_energy_raw / 0.10) * 10.0)
+
+    # Read communication_score from state — set by finalize_session() before
+    # graph.ainvoke(). None when fewer than half the turns had voice answers.
+    avg_speech = state.get("communication_score") or 0.0
 
     prompt = build_report_prompt(
         domain=state["domain"],

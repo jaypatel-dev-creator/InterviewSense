@@ -136,41 +136,42 @@ def _compute_pacing_score(wpm: float) -> float:
 
 def _compute_communication_score(speech_metrics: dict) -> float:
     """
-    Weighted communication score from three paralinguistic signals:
+    Fluency-based communication score derived entirely from Whisper word timestamps.
 
-    - Energy level (40%) — librosa RMS, proxy for vocal confidence/projection
-      Scaled: 0.10 RMS = 10.0. Capped at 10.
-    - Pitch variation (30%) — F0 std dev via librosa yin, proxy for expressiveness
-      Scaled: 80 Hz std dev = 10.0. Monotone delivery scores low.
-    - Fluency / filler rate (30%) — filler words per total word, proxy for hesitation
-      0 fillers = 10.0, degrades linearly. 0.5 fillers/word = 0.0.
+    librosa removed — energy_level (RMS) and pitch_variation (F0 std dev) were
+    basic signal processing metrics not actionable for interview feedback.
 
-    Using three signals instead of energy alone makes the score robust to
-    hardware variation — a laptop mic user can still score well on pitch
-    variation and fluency even if energy reads low.
+    Formula (research-backed thresholds):
+
+    Filler score (60% weight):
+        filler_rate = filler_word_count / total_words
+        0% fillers → 10.0 | 5% fillers → 5.0 | 10%+ fillers → 0.0
+        Source: Quantified Communications; Duvall et al. (2014) — 5% threshold
+        is where filler usage becomes noticeable in professional contexts.
+
+    Pause score (40% weight):
+        0 pauses → 10.0 | 3 pauses → 5.5 | 7+ pauses → 0.0
+        pause_threshold in analyzer.py is 1.5s — aligns with speech fluency
+        research classification of "long pauses" (≥1.5s).
+        Source: Interview communication research — 3–5s pauses rated uncomfortable,
+        6s+ rated damaging by interviewers.
     """
-    energy_level = speech_metrics.get("energy_level", 0.0)
-    pitch_variation = speech_metrics.get("pitch_variation", 0.0)
     filler_count = speech_metrics.get("filler_word_count", 0)
+    pause_count = speech_metrics.get("pause_count", 0)
     wpm = speech_metrics.get("wpm", 0.0)
     duration = speech_metrics.get("answer_duration_seconds", 0.0)
 
-    # Approximate word count from WPM and duration
-    word_count = max(1, round((wpm / 60) * duration)) if wpm > 0 and duration > 0 else 1
+    # Approximate total word count from WPM and duration
+    total_words = max(1, round((wpm / 60) * duration)) if wpm > 0 and duration > 0 else 1
 
-    # Energy score — cap at 0.10 RMS
-    energy_score = min(10.0, (energy_level / 0.10) * 10.0) if energy_level > 0 else 0.0
+    # Filler score — degrades linearly from 0% to 10% filler rate
+    filler_rate = filler_count / total_words
+    filler_score = max(0.0, 10.0 - (filler_rate / 0.05) * 5.0)
 
-    # Pitch variation score — cap at 60 Hz std dev (realistic after 85-300 Hz filter)
-    # Raw yin output filtered to human speech range gives 10-60 Hz std dev for
-    # normal speech. 80 Hz cap was designed for unfiltered output and no longer applies.
-    pitch_score = min(10.0, (pitch_variation / 60.0) * 10.0) if pitch_variation > 0 else 0.0
+    # Pause score — each long pause (>1.5s) costs 1.5 points
+    pause_score = max(0.0, 10.0 - pause_count * 1.5)
 
-    # Fluency score — filler rate penalises hesitation
-    filler_rate = filler_count / word_count
-    fluency_score = max(0.0, 10.0 - filler_rate * 20.0)
-
-    weighted = (energy_score * 0.40) + (pitch_score * 0.30) + (fluency_score * 0.30)
+    weighted = (filler_score * 0.60) + (pause_score * 0.40)
     return round(min(10.0, weighted), 2)
 
 
@@ -184,7 +185,7 @@ async def finalize_session(
     Finalizes the interview session:
     - Computes technical, communication, pacing, and composite scores
     - Computes JD coverage if JD skills were provided
-    - Invokes report_generator_node via the graph
+    - Invokes report_generator_node via the graph with communication_score in state
     - Persists report and session end time to DB
     - Sends report_ready WebSocket event to frontend
 
@@ -220,13 +221,6 @@ async def finalize_session(
         logger.info(f"Empty report sent for session: {session_id}")
         return
 
-    # Run report_generator_node
-    result = await graph.ainvoke({**state, "interview_complete": True})
-    improvement_plan = (
-        result.get("improvement_plan_text", "")
-        or "No improvement plan was generated for this session."
-    )
-
     turns = state["turns"]
     question_count = state["question_count"]
 
@@ -238,17 +232,18 @@ async def finalize_session(
     ]
     avg_technical = sum(technical_scores) / question_count if technical_scores else 0.0
 
-    # Communication score — weighted composite of energy, pitch variation, fluency
-    # N/A if fewer than half questions had voice answers
-    audio_turns = [
+    # Communication score — fluency-based (filler rate + pause count).
+    # Guard: wpm > 0 confirms a voice answer was recorded for this turn.
+    # N/A if fewer than half the questions had voice answers.
+    voice_turns = [
         t for t in turns
-        if t.get("speech_metrics", {}).get("energy_level", 0.0) > 0
+        if t.get("speech_metrics", {}).get("wpm", 0.0) > 0
     ]
-    if len(audio_turns) >= question_count / 2:
+    if len(voice_turns) >= question_count / 2:
         avg_communication = sum(
             _compute_communication_score(t["speech_metrics"])
-            for t in audio_turns
-        ) / len(audio_turns)
+            for t in voice_turns
+        ) / len(voice_turns)
     else:
         avg_communication = None
 
@@ -291,6 +286,18 @@ async def finalize_session(
         }
     else:
         jd_coverage = None
+
+    # Pass communication_score into state so report_generator_node reads it
+    # directly — single source of truth, no recomputation inside the graph.
+    result = await graph.ainvoke({
+        **state,
+        "interview_complete": True,
+        "communication_score": avg_communication,
+    })
+    improvement_plan = (
+        result.get("improvement_plan_text", "")
+        or "No improvement plan was generated for this session."
+    )
 
     report = {
         "report_id": str(uuid.uuid4()),

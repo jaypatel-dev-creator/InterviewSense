@@ -1,5 +1,4 @@
 import numpy as np
-import librosa
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -19,42 +18,33 @@ FILLER_WORDS = {
 
 
 def extract_speech_features(
-    audio: np.ndarray,
-    sample_rate: int = 16000,
     words: list[dict] | None = None,
+    duration: float = 0.0,
 ) -> dict:
     """
-    Extracts paralinguistic features from raw audio + optional word timestamps.
+    Extracts speech features purely from Whisper word timestamps.
+
+    librosa removed — energy_level (RMS) and pitch_variation (F0 std dev)
+    were basic signal processing metrics, not actionable for interview feedback,
+    and pulled torch, numba, llvmlite as transitive dependencies.
+
+    All metrics are now derived entirely from Whisper word-level timestamps.
 
     Args:
-        audio:       mono float32 numpy array
-        sample_rate: sample rate of the audio
-        words:       word-level timestamps from Whisper (optional)
+        words:    word-level timestamps from Whisper (optional)
+        duration: audio duration in seconds
 
     Returns dict with all speech metrics.
     """
-    duration = len(audio) / sample_rate
-
-    # --- Whisper-derived features (pure math, no model) ---
     wpm = _compute_wpm(words, duration) if words else 0.0
     pause_count = _compute_pause_count(words) if words else 0
     filler_count = _compute_filler_count(words) if words else 0
-
-    # --- librosa features (raw audio signal) ---
-    pitch_variation = _compute_pitch_variation(audio, sample_rate)
-    energy_level = _compute_energy_level(audio)
-    # silence_ratio removed — always 0 with browser-side VAD architecture.
-    # Browser trims silence before sending chunks so the backend never sees
-    # silent frames. _compute_silence_ratio also requires scikit-learn
-    # internally via librosa — removed to avoid the dependency.
 
     metrics = {
         "wpm": round(wpm, 2),
         "pause_count": pause_count,
         "filler_word_count": filler_count,
         "answer_duration_seconds": round(duration, 2),
-        "pitch_variation": round(pitch_variation, 4),
-        "energy_level": round(energy_level, 4),
     }
 
     logger.debug(f"Speech features extracted: {metrics}")
@@ -92,38 +82,3 @@ def _compute_filler_count(words: list[dict]) -> int:
             if bigram in FILLER_WORDS:
                 count += 1
     return count
-
-
-def _compute_pitch_variation(audio: np.ndarray, sample_rate: int) -> float:
-    """
-    Standard deviation of F0 via librosa.yin — proxy for vocal expressiveness.
-    Replaces pyin which was probabilistic and took 20-40s on CPU for long clips.
-    yin is deterministic, runs in ~50ms on the same hardware.
-    """
-    try:
-        f0 = librosa.yin(
-            audio,
-            fmin=librosa.note_to_hz("C2"),
-            fmax=librosa.note_to_hz("C7"),
-            sr=sample_rate,
-        )
-        # Filter to realistic human speech range (85–300 Hz).
-        # librosa.yin returns spurious high-frequency estimates on consonants
-        # and noise frames even with f0 > 0 filter — these inflate std dev to
-        # 400-600 Hz which is meaningless. Human fundamental frequency sits
-        # between 85 Hz (deep male voice) and 300 Hz (high female voice).
-        f0_voiced = f0[(f0 >= 85) & (f0 <= 300)]
-        return float(np.std(f0_voiced)) if len(f0_voiced) > 0 else 0.0
-    except Exception as e:
-        logger.warning(f"Pitch extraction failed: {e}")
-        return 0.0
-
-
-def _compute_energy_level(audio: np.ndarray) -> float:
-    """RMS energy — proxy for vocal confidence and projection."""
-    try:
-        rms = librosa.feature.rms(y=audio)
-        return float(np.mean(rms))
-    except Exception as e:
-        logger.warning(f"Energy extraction failed: {e}")
-        return 0.0

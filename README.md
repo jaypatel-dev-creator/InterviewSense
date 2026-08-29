@@ -9,7 +9,7 @@
 ![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-000000?style=flat)
 ![Status](https://img.shields.io/badge/Status-Local_Demo-yellow?style=flat)
 
-A voice-native AI interview coach that simulates real technical interviews end-to-end — adaptive questioning, paralinguistic analysis, JD skill traceability, and a structured post-session report. Built as a full-stack production system with a LangGraph evaluation pipeline backend and a React frontend.
+A voice-native AI interview coach that simulates real technical interviews end-to-end — adaptive questioning, fluency analysis, JD skill traceability, and a structured post-session report. Built as a full-stack production system with a LangGraph evaluation pipeline backend and a React frontend.
 
 ---
 
@@ -18,7 +18,7 @@ A voice-native AI interview coach that simulates real technical interviews end-t
 InterviewSense conducts a complete mock technical interview using your microphone as primary source or text input as a fallback, then evaluates your performance across three dimensions:
 
 - **Technical accuracy** — per-question correctness scored by an LLM evaluator
-- **Communication** — weighted composite of vocal energy, pitch variation, and fluency
+- **Communication** — fluency score based on filler word rate and long pause frequency, derived from Whisper word timestamps
 - **Pacing** — words-per-minute benchmarked against the 120–160 wpm ideal range
 
 The evaluator adapts each follow-up question based on a rolling conversation summary — it knows how you answered Q1 when generating Q3, not just what topic was covered.
@@ -39,9 +39,8 @@ Browser (React + Zustand)
 FastAPI Backend
     │
     ├── Audio Pipeline
-    │   ├── Groq Whisper v3 Turbo     — speech-to-text transcription
-    │   └── librosa 0.10.2            — paralinguistic feature extraction
-    │       (WPM, pause count, filler words, energy level, pitch variation)
+    │   └── Groq Whisper v3 Turbo     — speech-to-text + word-level timestamps
+    │       (WPM, pause count, filler words, answer duration — all Whisper-derived)
     │
     └── LangGraph Agent Graph
         ├── Speech Analytics Node     — pure Python, no LLM, reads processor output
@@ -65,7 +64,7 @@ The evaluator-router merges evaluation, next-question generation, and JD skill t
 
 ### Chunk-Based Transcript Pipeline
 
-Audio is captured in streaming `Float32Array` chunks via the Web Audio API, processed in parallel through Whisper STT and librosa signal analysis on the backend, and streamed back to the frontend as `transcript_update` WebSocket events. True word-by-word streaming is constrained by Groq Whisper's batch transcription API; upgrading to a streaming STT provider (e.g. Deepgram) requires zero architectural changes.
+Audio is captured in streaming `Float32Array` chunks via the Web Audio API, transcribed via Groq Whisper on the backend, and streamed back to the frontend as `transcript_update` WebSocket events. Whisper returns word-level timestamps which are used directly to compute all speech metrics — no separate signal processing library is required. True word-by-word streaming is constrained by Groq Whisper's batch transcription API; upgrading to a streaming STT provider (e.g. Deepgram) requires zero architectural changes.
 
 ---
 
@@ -79,7 +78,7 @@ Audio is captured in streaming `Float32Array` chunks via the Web Audio API, proc
 | LLM | Gemini 3.1 Flash Lite via langchain-google-genai |
 | STT | Groq Whisper Large v3 Turbo |
 | TTS | ElevenLabs (custom Voice Design voice) |
-| Paralinguistics | librosa 0.10.2, numpy, scipy |
+| Audio | soundfile, numpy |
 | Database | SQLite via SQLAlchemy async ORM + aiosqlite |
 
 ---
@@ -103,8 +102,10 @@ Each domain has 24–30 seed topics. Without a JD, questions are drawn from the 
 | Metric | Method | Weight |
 |---|---|---|
 | Technical | LLM correctness score (0–10) per question, averaged over `question_count` (skipped = 0) | 60% |
-| Communication | Weighted composite: vocal energy 40% (RMS), pitch variation 30% (F0 std dev), fluency 30% (filler rate) | 25% |
+| Communication | Fluency score: filler rate 60% + pause frequency 40%. Thresholds from speech communication research — 0% fillers = 10.0, 5% = 5.0, 10%+ = 0.0. 0 long pauses = 10.0, degrades 1.5 pts per pause. | 25% |
 | Pacing | WPM score: 120–160 wpm = 10, degrades linearly outside range | 15% |
+
+All metrics are derived purely from Groq Whisper word-level timestamps — no separate audio signal processing library.
 
 Communication and Pacing show N/A when fewer than half the questions received voice answers. Weights redistribute to Technical only in that case.
 
@@ -114,8 +115,8 @@ Communication and Pacing show N/A when fewer than half the questions received vo
 
 ## Known Limitations
 
-**1. Communication score accuracy — laptop microphone**
-Communication score is a weighted composite of vocal energy (40%), pitch variation (30%), and fluency/filler rate (30%). Laptop integrated mics produce lower RMS energy readings than headset or external mics — the energy component will read low, but pitch variation and fluency scores are hardware-independent and help balance the overall communication score. For best results, use a headset or external microphone.
+**1. Communication score is fluency-only**
+Communication score measures filler word rate and long pause frequency — both derived from Whisper word timestamps. It does not measure vocal energy, tone, or expressiveness, which would require a separate audio signal processing pipeline. The score is hardware-independent and consistent across microphone types.
 
 **2. Live transcript is chunk-based, not word-by-word**
 The transcript pipeline sends audio chunks to Groq Whisper for transcription after speech is detected. The transcript appears all at once after you finish speaking — not incrementally word by word. True real-time word-level updates would require switching to a streaming STT provider (e.g. Deepgram) with zero backend architectural changes — Groq Whisper's API does not support streaming transcription.
@@ -127,7 +128,7 @@ ElevenLabs blocks library voices on the free tier. The app requires a custom Voi
 The evaluator-router and report generator use Gemini 3.1 Flash Lite (15 RPM, 1500 RPD on free tier). Heavy testing across multiple sessions in a short window may exhaust the daily quota, causing the report generator to return empty output. Upgrading to a paid Gemini tier removes this constraint.
 
 **5. Per-turn latency — chained API calls**
-Each voice answer triggers three operations: Groq Whisper transcription (~1–2s) + librosa CPU audio analysis (~1–3s, runs in parallel) + Gemini evaluator-router structured output call (~2–4s). Combined with ElevenLabs TTS synthesis for the next question (~1–2s), expect 5–10 seconds between submitting an answer and hearing the next question.
+Each voice answer triggers two sequential operations: Groq Whisper transcription (~1–2s) + Gemini evaluator-router structured output call (~2–4s). Combined with ElevenLabs TTS synthesis for the next question (~1–2s), expect 4–8 seconds between submitting an answer and hearing the next question.
 
 **6. Browser-side VAD — energy threshold, not neural**
 Voice activity detection runs in the browser via an RMS energy threshold. This works reliably in quiet environments but can misfire in noisy conditions or cut off soft-spoken answers early. For production, the correct upgrade is a lightweight ONNX version of Silero VAD running in the browser via `onnxruntime-web` — same browser-side architecture, neural accuracy, zero server round-trip overhead.

@@ -26,11 +26,9 @@ sqlalchemy[asyncio]>=2.0
 # Audio — STT
 groq==1.6.0
 
-# Audio — Paralinguistics
-librosa==0.10.2
+# Audio
 soundfile==0.14.0
 numpy==1.26.4
-scipy==1.13.1
 
 # ElevenLabs TTS
 elevenlabs==2.63.0

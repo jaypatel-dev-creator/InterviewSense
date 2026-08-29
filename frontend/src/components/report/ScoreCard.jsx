@@ -117,8 +117,7 @@ export default function ScoreCard({ report }) {
         />
         <Score
           label="Communication"
-          
-          sublabel="Energy · pitch · fluency"
+          sublabel="Filler rate · pauses"
           value={report.communication_score}
         />
         <Score
@@ -129,4 +128,4 @@ export default function ScoreCard({ report }) {
       </div>
     </div>
   )
-}
+}re
