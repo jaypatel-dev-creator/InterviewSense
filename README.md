@@ -131,10 +131,32 @@ The evaluator-router and report generator use Gemini 3.1 Flash Lite (15 RPM, 150
 Each voice answer triggers two sequential operations: Groq Whisper transcription (~1–2s) + Gemini evaluator-router structured output call (~2–4s). Combined with ElevenLabs TTS synthesis for the next question (~1–2s), expect 4–8 seconds between submitting an answer and hearing the next question.
 
 **6. Browser-side VAD — energy threshold, not neural**
-Voice activity detection runs in the browser via an RMS energy threshold. This works reliably in quiet environments but can misfire in noisy conditions or cut off soft-spoken answers early. For production, the correct upgrade is a lightweight ONNX version of Silero VAD running in the browser via `onnxruntime-web` — same browser-side architecture, neural accuracy, zero server round-trip overhead.
+Voice activity detection runs in the browser via an RMS energy threshold. This works reliably in quiet environments but can misfire in noisy conditions or cut off soft-spoken answers early.
 
 **7. Local only — no deployment**
 InterviewSense is designed for local use. The audio pipeline requires direct microphone access via the Web Audio API, which works reliably on localhost. Deploying to a remote server introduces latency in the WebSocket audio stream that degrades transcript quality. CORS origins are configurable via the `ALLOWED_ORIGINS` environment variable for deployment.
+
+**8. Filler word detection — context-blind matching**
+Filler words are detected by matching Whisper transcript words against a hardcoded set. This cannot distinguish context — "so" as a filler ("so, um, basically...") and "so" as a connector ("and so the request gets routed...") are penalised identically. Filler rate can read artificially high for candidates who use discourse connectors naturally, even when their speech is fluent. The correct fix is `praat-parselmouth` (Python bindings for Praat, the linguistics research standard) — it detects filled pauses acoustically, not lexically, eliminating false positives with zero torch/numba overhead. Short-term mitigation: restrict the filler set to unambiguous hesitation sounds only (`um`, `uh`, `er`, `hmm`, `like`, `you know`, `kind of`, `sort of`, `i mean`).
+
+---
+
+## Future Improvements
+
+**1. Acoustic filler detection via praat-parselmouth**
+Replace the hardcoded word-matching approach with `praat-parselmouth` — Python bindings for Praat, the gold standard in linguistics research. Detects filled pauses (`uh`, `um`) acoustically using signal boundaries rather than transcript words, eliminating false positives on discourse connectors like "so" and "right". No torch, no numba — lightweight drop-in upgrade to `audio/analyzer.py`.
+
+**2. Real-time word-by-word transcript via Deepgram**
+Switch from Groq Whisper (batch transcription) to Deepgram streaming STT. Word-level tokens arrive in real time as the candidate speaks — the frontend can render the transcript incrementally instead of all at once after speech ends. Zero backend architectural changes required — the WebSocket protocol and LangGraph pipeline are STT-provider agnostic.
+
+**3. Neural VAD via Silero**
+Replace the browser-side RMS energy threshold with a lightweight ONNX build of Silero VAD running in the browser via `onnxruntime-web`. Same browser-side architecture, neural accuracy, no server round-trip. Eliminates misfires in noisy environments and early cutoffs on soft-spoken answers.
+
+**4. Deployment — Docker + managed WebSocket**
+Containerise backend and frontend with Docker Compose. Replace the direct WebSocket audio stream with a managed real-time transport (e.g. LiveKit, Daily) to handle the latency introduced by a remote server without degrading transcript quality. CORS origins are already configurable via `ALLOWED_ORIGINS`.
+
+**5. Persistent user profiles**
+Track score history across sessions — technical score trend per domain, communication score over time, filler word frequency improvement. Currently each session is isolated; the DB schema already stores all the data needed, it just isn't aggregated across sessions in the frontend.
 
 ---
 
