@@ -128,4 +128,4 @@ export default function ScoreCard({ report }) {
       </div>
     </div>
   )
-}re
+}

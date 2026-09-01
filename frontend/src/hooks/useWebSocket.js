@@ -34,9 +34,10 @@ export function useWebSocket() {
             break
 
           case 'report_ready':
-            // Set report, turns, and screen atomically in one store update
-            // to prevent ReportScreen from rendering with stale data between
-            // individual setX calls. Disconnect after state is committed.
+            // Commit report, turns, and screen atomically — prevents ReportScreen
+            // rendering with stale data between individual setX calls.
+            // speech_metrics from the final turn arrive in transcript_update
+            // before report_ready, so metrics are already in store by this point.
             useSessionStore.setState({
               report: data.report,
               turns: data.turns || [],
@@ -83,7 +84,18 @@ export function useWebSocket() {
   const sendText = useCallback((text) => {
     _wsInstance?.sendText(text)
     setProcessing(true)
-  }, [setProcessing])
+    // Reset speech metrics to zeros when text answer is submitted —
+    // no transcript_update arrives for text answers, so without this reset
+    // the panel would keep showing the previous voice answer's metrics.
+    // AnalyticsPanel detects wpm === 0 && duration === 0 as a text answer
+    // and shows "Text answer — no speech data recorded." label.
+    updateLiveTranscript('', {
+      wpm: 0,
+      pause_count: 0,
+      filler_word_count: 0,
+      answer_duration_seconds: 0,
+    })
+  }, [setProcessing, updateLiveTranscript])
 
   const sendControl = useCallback((type) => {
     _wsInstance?.sendControl(type)

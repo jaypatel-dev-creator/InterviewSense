@@ -127,11 +127,26 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
   const pauseBarPct = Math.min(100, (pauseCount / 7) * 100)
   const pauseColor = pauseCount <= 1 ? '#16a34a' : pauseCount <= 3 ? '#d97706' : '#dc2626'
 
+  const isTextAnswer = wpm === 0 && duration === 0 && metrics !== null
+
   return (
     <div className="p-6 space-y-6 h-full overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
       <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#a8a49e' }}>
         Speech Analytics
       </h3>
+
+      {isTextAnswer && (
+        <div
+          className="px-3 py-2 text-xs"
+          style={{
+            color: '#6b6860',
+            backgroundColor: '#f8f7f4',
+            border: '1px solid #e2e0db',
+          }}
+        >
+          Text answer — no speech data recorded.
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* Pacing — WPM bar + Slow/Good/Fast label */}
