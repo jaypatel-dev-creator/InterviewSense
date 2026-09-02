@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useCallback } from 'react'
 import { InterviewWebSocket, buildInterviewWSUrl } from '../services/websocket'
 import { useSessionStore } from '../store/sessionStore'
 import { useUIStore } from '../store/uiStore'
@@ -23,7 +23,17 @@ export function useWebSocket() {
       onMessage: (data) => {
         switch (data.type) {
           case 'question':
-            setQuestion(data.question, data.question_number, data.question_count)
+            // Pass evaluation into setQuestion so it is cleared/set atomically
+            // in one Zustand set() call. evaluation is embedded inside the
+            // question message from the backend — passing it here guarantees
+            // the new question and its evaluation (or null for Q1) render together,
+            // with no stale evaluation from the previous question bleeding through.
+            setQuestion(
+              data.question,
+              data.question_number,
+              data.question_count,
+              data.evaluation || null,
+            )
             setAISpeaking(true)
             setProcessing(false)
             speakText(data.question).then(() => setAISpeaking(false))
@@ -36,8 +46,6 @@ export function useWebSocket() {
           case 'report_ready':
             // Commit report, turns, and screen atomically — prevents ReportScreen
             // rendering with stale data between individual setX calls.
-            // speech_metrics from the final turn arrive in transcript_update
-            // before report_ready, so metrics are already in store by this point.
             useSessionStore.setState({
               report: data.report,
               turns: data.turns || [],
@@ -55,10 +63,6 @@ export function useWebSocket() {
 
           default:
             break
-        }
-
-        if (data.evaluation) {
-          setLastEvaluation(data.evaluation)
         }
       },
 

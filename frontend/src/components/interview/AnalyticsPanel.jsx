@@ -75,7 +75,7 @@ function EvaluationBlock({ evaluation }) {
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium" style={{ color: '#6b6860' }}>
-          Last answer
+          Previous answer score
         </span>
         <span
           className="text-sm font-semibold font-mono"
@@ -228,12 +228,12 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
           className="text-xs font-semibold uppercase tracking-wider mb-4"
           style={{ color: '#a8a49e' }}
         >
-          Evaluation
+          Previous Answer
         </h3>
         <EvaluationBlock evaluation={evaluation} />
         {!evaluation && (
           <p className="text-xs" style={{ color: '#a8a49e' }}>
-            Evaluation appears after your first answer.
+            Results appear after your first answer.
           </p>
         )}
       </div>

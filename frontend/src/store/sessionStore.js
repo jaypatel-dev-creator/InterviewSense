@@ -36,12 +36,16 @@ export const useSessionStore = create((set, get) => ({
       report: null,
     }),
 
-  setQuestion: (question, questionNumber, questionCount) =>
+  // evaluation is passed here directly — question message embeds evaluation
+  // from the backend. Clearing and setting evaluation atomically in one
+  // set() call guarantees no stale evaluation bleeds into the next question.
+  setQuestion: (question, questionNumber, questionCount, evaluation = null) =>
     set({
       currentQuestion: question,
       currentQuestionNumber: questionNumber,
       questionCount: questionCount ?? get().questionCount,
       liveTranscript: '',
+      lastEvaluation: evaluation,
     }),
 
   updateLiveTranscript: (text, metrics) =>
