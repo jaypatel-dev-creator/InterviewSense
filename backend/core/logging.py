@@ -21,7 +21,6 @@ def setup_logging(app_env: str = "development") -> None:
         "opentelemetry",
         "google.auth",
         "google.auth.transport",
-        "faster_whisper",
         # Groq HTTP client dumps raw binary audio bytes at DEBUG level
         "groq._base_client",
         "groq",

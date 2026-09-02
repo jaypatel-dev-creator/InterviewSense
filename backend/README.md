@@ -42,12 +42,15 @@ ELEVENLABS_API_KEY=your_elevenlabs_key
 ELEVENLABS_VOICE_ID=your_voice_design_voice_id
 LANGCHAIN_API_KEY=your_langsmith_key       # optional
 LANGCHAIN_TRACING_V2=true                  # optional
+LANGCHAIN_PROJECT=interviewsense           # optional
 APP_ENV=development
 SQLITE_DB_PATH=./data/sessions/interviewsense.db
 ALLOWED_ORIGINS=["http://localhost:5173"]  # override for deployment
 ```
 
 > `ELEVENLABS_VOICE_ID` is required — the app will refuse to start without it. Library voices are blocked on the ElevenLabs free tier. Create a custom voice via Voice Design and copy its ID.
+
+> **LangSmith tracing (optional):** When `LANGCHAIN_API_KEY` and `LANGCHAIN_TRACING_V2=true` are set, LangSmith auto-instruments all LangGraph node executions and Gemini calls with zero code changes. Every turn's evaluator-router call, JD skill extraction, and report generation appears in your LangSmith dashboard at [smith.langchain.com](https://smith.langchain.com) with full input/output, latency breakdown, and token usage per node. Set `LANGCHAIN_PROJECT` to group runs under a named project. No other configuration required.
 
 ### 4. Run
 
