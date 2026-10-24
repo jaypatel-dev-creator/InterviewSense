@@ -101,9 +101,9 @@ ScriptProcessorNode (bufferSize: 4096)
 
 | Parameter | Value | Purpose |
 |---|---|---|
-| `SILENCE_THRESHOLD` | 0.01 | Energy below this = silence |
-| `SILENCE_DURATION_MS` | 1500 | Silence duration before flush |
-| `MIN_AUDIO_SECONDS` | 1.5 | Minimum chunk length to send |
+| `SILENCE_THRESHOLD` | 0.04 | Peak amplitude below this = silence |
+| `SILENCE_DURATION_MS` | 4000 | Silence duration before flush |
+| `MIN_AUDIO_SECONDS` | 2.0 | Minimum chunk length to send |
 | `MIN_ENERGY` | 0.005 | Minimum energy to consider valid audio |
 
 After flush, mic is torn down (`_teardown()`) and a `teardownRef` flag prevents stale closure re-entry. A double-click guard on the start button prevents duplicate mic initializations.

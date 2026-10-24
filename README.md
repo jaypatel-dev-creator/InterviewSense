@@ -154,6 +154,10 @@ The browser recorder uses `ScriptProcessorNode`, which is deprecated in favour o
 **11. JD text travels in the WebSocket URL**
 `jd_text` is sent as a query parameter on the WebSocket connection, so long job descriptions can hit URL length limits, and URLs are commonly written to server logs. The session is already created via `POST /api/sessions`, so the backend could load the JD from the database by `session_id` instead.
 
+
+**12. Pause detection has a limited window**
+A pause counts as "long" when the gap between two Whisper words exceeds 1.5s. The recorder ends and sends the answer after 4s of silence, so only pauses between 1.5s and 4s are ever counted — a longer pause ends the recording and never appears in a transcript. Pause counts also depend on Whisper's word timestamps, which can be imprecise around silence, so the metric may under-report. The Communication score's pause component should be read with that in mind.
+
 ---
 
 ## Future Improvements
