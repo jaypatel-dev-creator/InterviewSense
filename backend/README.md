@@ -1,6 +1,6 @@
 # InterviewSense — Backend
 
-FastAPI + LangGraph backend for InterviewSense. Handles WebSocket session management, audio processing, LangGraph pipeline evaluation, JD skill traceability, and report generation.
+FastAPI + LangGraph backend for InterviewSense. Handles WebSocket session management, audio processing, LangGraph workflow evaluation, JD skill traceability, and report generation.
 
 ---
 
@@ -62,7 +62,7 @@ Backend starts at `http://localhost:8000`. SQLite database is created automatica
 
 ---
 
-## Agent Graph
+## Evaluation Workflow
 
 ```
 SessionState (LangGraph TypedDict)
@@ -169,8 +169,8 @@ Domain and difficulty are validated before the connection is accepted — invali
 avg_technical = sum(correctness_scores) / question_count
 
 # Communication — fluency score from Whisper-derived metrics only
-# Thresholds grounded in speech communication research:
-#   Filler rate: 0% = 10.0, 5% = 5.0, 10%+ = 0.0  (Quantified Communications)
+# Thresholds:
+#   Filler rate: 0% = 10.0, 5% = 5.0, 10%+ = 0.0
 #   Pauses: 0 long pauses = 10.0, degrades 1.5 pts per pause > 1.5s
 total_words   = max(1, round((wpm / 60) * duration))
 filler_rate   = filler_word_count / total_words

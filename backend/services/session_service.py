@@ -22,11 +22,6 @@ def utcnow_iso() -> str:
 
 
 def _extract_text(response) -> str:
-    """
-    langchain-google-genai returns response.content as a list of dicts:
-    [{'type': 'text', 'text': '...', 'extras': {'signature': '...'}}]
-    Extract all 'text' values and join them.
-    """
     content = response.content
     if isinstance(content, list):
         return "".join(
@@ -40,11 +35,6 @@ def _extract_text(response) -> str:
 
 
 async def extract_jd_skills(jd_text: str) -> list[str]:
-    """
-    Extracts role-specific skills from a job description via a Gemini call.
-    Returns an empty list when JD is empty or extraction fails — non-fatal,
-    session continues without JD grounding.
-    """
     if not jd_text or not jd_text.strip():
         return []
     llm = get_llm()
@@ -68,11 +58,6 @@ async def generate_first_question(
     difficulty: str,
     jd_skills: list[str],
 ) -> str:
-    """
-    Generates the opening question for a session (or a replacement question
-    after a skip) via a Gemini call. Falls back to a generic domain question
-    on failure — non-fatal, session continues with a degraded first question.
-    """
     llm = get_llm()
     seed_topics = SEED_TOPICS.get(domain, [])
     prompt = build_first_question_prompt(
@@ -93,15 +78,6 @@ async def generate_first_question(
 
 
 def build_conversation_summary_line(state: SessionState, evaluated_turn: dict) -> str:
-    """
-    Builds one plain-text line summarising the evaluated turn.
-    Appended to state['conversation_summary'] after each answered turn
-    so the evaluator-router has prior Q&A context when generating the next question.
-
-    Format: "Q{n}: {question[:80]} | Score: {score}/10 | A: {answer[:200]}"
-    Answer truncated to 200 chars to keep prompt size bounded over 10 questions.
-    No LLM call — pure string formatting.
-    """
     score_str = (
         f"{evaluated_turn.get('correctness_score', 0):.1f}"
         if evaluated_turn.get("correctness_score") is not None
@@ -116,13 +92,6 @@ def build_conversation_summary_line(state: SessionState, evaluated_turn: dict) -
 
 
 def _compute_pacing_score(wpm: float) -> float:
-    """
-    Converts WPM to a 0-10 score.
-    Ideal interview pace is 120-160 wpm — score 10.
-    Outside that range score degrades linearly.
-    Below 80 or above 220 — floor at 2.0.
-    Returns 0.0 if wpm is 0 (no speech detected).
-    """
     if wpm <= 0:
         return 0.0
     if 120 <= wpm <= 160:
@@ -135,27 +104,6 @@ def _compute_pacing_score(wpm: float) -> float:
 
 
 def _compute_communication_score(speech_metrics: dict) -> float:
-    """
-    Fluency-based communication score derived entirely from Whisper word timestamps.
-
-    librosa removed — energy_level (RMS) and pitch_variation (F0 std dev) were
-    basic signal processing metrics not actionable for interview feedback.
-
-    Formula (research-backed thresholds):
-
-    Filler score (60% weight):
-        filler_rate = filler_word_count / total_words
-        0% fillers → 10.0 | 5% fillers → 5.0 | 10%+ fillers → 0.0
-        Source: Quantified Communications; Duvall et al. (2014) — 5% threshold
-        is where filler usage becomes noticeable in professional contexts.
-
-    Pause score (40% weight):
-        0 pauses → 10.0 | 3 pauses → 5.5 | 7+ pauses → 0.0
-        pause_threshold in analyzer.py is 1.5s — aligns with speech fluency
-        research classification of "long pauses" (≥1.5s).
-        Source: Interview communication research — 3–5s pauses rated uncomfortable,
-        6s+ rated damaging by interviewers.
-    """
     filler_count = speech_metrics.get("filler_word_count", 0)
     pause_count = speech_metrics.get("pause_count", 0)
     wpm = speech_metrics.get("wpm", 0.0)
@@ -181,17 +129,6 @@ async def finalize_session(
     session_id: str,
     graph,
 ) -> None:
-    """
-    Finalizes the interview session:
-    - Computes technical, communication, pacing, and composite scores
-    - Computes JD coverage if JD skills were provided
-    - Invokes report_generator_node via the graph with communication_score in state
-    - Persists report and session end time to DB
-    - Sends report_ready WebSocket event to frontend
-
-    Extracted from websocket.py to keep the WebSocket handler as a
-    pure protocol layer — message routing only, no scoring business logic.
-    """
     logger.info(f"Finalizing session: {session_id}")
 
     # 0-turn guard — user ended before answering or skipping anything
