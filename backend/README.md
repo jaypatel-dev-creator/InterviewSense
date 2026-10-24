@@ -131,7 +131,7 @@ Binary WebSocket frame (Float32Array)
                             └── Answer duration — speaking time (first word start to last word end)
 ```
 
-All speech metrics are derived entirely from Whisper word-level timestamps. No separate audio signal processing library is used. Voice activity detection runs browser-side in `useAudioRecorder.js` — audio chunks are only sent when speech is detected.
+All speech metrics are derived entirely from Whisper word-level timestamps. No separate audio signal processing library is used. Voice activity detection runs browser-side in `useAudioRecorder.js` — the browser buffers each answer and sends it as a single blob after 4 seconds of silence (or when the stop button is clicked).
 
 ---
 

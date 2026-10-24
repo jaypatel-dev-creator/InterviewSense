@@ -34,7 +34,7 @@ At session end, a report generator produces a structured improvement plan: weak 
 ```
 Browser (React + Zustand)
     │
-    ├── WebSocket (binary audio chunks + JSON control messages)
+    ├── WebSocket (one binary audio blob per answer + JSON control messages)
     │
 FastAPI Backend
     │
@@ -51,7 +51,7 @@ FastAPI Backend
             (improvement plan, weak topics, JD coverage, study recommendations)
 ```
 
-> Voice activity detection runs browser-side via the `useAudioRecorder` hook — audio chunks are only sent when speech is detected, keeping the WebSocket stream clean without server-side VAD overhead.
+> Voice activity detection runs browser-side via the `useAudioRecorder` hook — the browser buffers each answer and sends it as a single binary blob once 4 seconds of silence is detected (or the stop button is clicked). Silent or very short recordings are discarded client-side, so no server-side VAD is needed.
 
 ### LangGraph Workflow Design
 
@@ -64,7 +64,7 @@ The evaluator-router merges evaluation, next-question generation, and JD skill t
 
 ### Chunk-Based Transcript Pipeline
 
-Audio is captured in streaming `Float32Array` chunks via the Web Audio API, transcribed via Groq Whisper on the backend, and streamed back to the frontend as `transcript_update` WebSocket events. Whisper returns word-level timestamps which are used directly to compute all speech metrics — no separate signal processing library is required. True word-by-word streaming is constrained by Groq Whisper's batch transcription API; upgrading to a streaming STT provider (e.g. Deepgram) requires zero architectural changes.
+Audio is captured as `Float32Array` frames via the Web Audio API and buffered in the browser. When the answer ends, the full buffer is sent as one blob, transcribed via Groq Whisper on the backend, and returned to the frontend as a `transcript_update` WebSocket event. Whisper returns word-level timestamps which are used directly to compute all speech metrics — no separate signal processing library is required. True word-by-word streaming is constrained by Groq Whisper's batch transcription API; upgrading to a streaming STT provider (e.g. Deepgram) requires zero architectural changes.
 
 ---
 
@@ -119,7 +119,7 @@ Communication and Pacing show N/A when fewer than half the questions received vo
 Communication score measures filler word rate and long pause frequency — both derived from Whisper word timestamps. It does not measure vocal energy, tone, or expressiveness, which would require a separate audio signal processing pipeline. The score is hardware-independent and consistent across microphone types.
 
 **2. Live transcript is chunk-based, not word-by-word**
-The transcript pipeline sends audio chunks to Groq Whisper for transcription after speech is detected. The transcript appears all at once after you finish speaking — not incrementally word by word. True real-time word-level updates would require switching to a streaming STT provider (e.g. Deepgram) with zero backend architectural changes — Groq Whisper's API does not support streaming transcription.
+The transcript pipeline sends each recorded answer to Groq Whisper as one audio blob after silence is detected. The transcript appears all at once after you finish speaking — not incrementally word by word. True real-time word-level updates would require switching to a streaming STT provider (e.g. Deepgram) with zero backend architectural changes — Groq Whisper's API does not support streaming transcription.
 
 **3. ElevenLabs free tier — custom voice required**
 ElevenLabs blocks library voices on the free tier. The app requires a custom Voice Design voice. `ELEVENLABS_VOICE_ID` has no default and the app will fail to start without it. Monthly character quota (10,000 on free tier) limits the number of sessions per billing cycle.
@@ -157,6 +157,19 @@ The browser recorder uses `ScriptProcessorNode`, which is deprecated in favour o
 
 **12. Pause detection has a limited window**
 A pause counts as "long" when the gap between two Whisper words exceeds 1.5s. The recorder ends and sends the answer after 4s of silence, so only pauses between 1.5s and 4s are ever counted — a longer pause ends the recording and never appears in a transcript. Pause counts also depend on Whisper's word timestamps, which can be imprecise around silence, so the metric may under-report. The Communication score's pause component should be read with that in mind.
+
+
+**13. Scoring is LLM-judged and non-deterministic**
+Technical correctness is scored by a single Gemini call per answer with no reference answers, and one model instance at temperature 0.7 serves question generation, grading and report writing. The same answer can receive different scores across runs. Lowering the temperature is not a clean fix: Google recommends leaving Gemini 3.x models at their default temperature, so a stricter scoring rubric in the prompt is the better mitigation.
+
+**14. Ending early penalises unanswered questions**
+The technical score is averaged over the configured `question_count`, so ending an interview early counts the unreached questions as zeros. The report-generator prompt averages over scored turns only, so the figure the LLM sees can differ from the final score.
+
+**15. Skipped questions are replaced without context**
+A skipped question is replaced by a new one generated from the seed topics with no knowledge of the questions already asked, so it can repeat a topic that was already covered.
+
+**16. Answer processing blocks the WebSocket loop**
+Transcription and evaluation (roughly 4–8 seconds of Groq and Gemini calls) are awaited inside the WebSocket receive loop. Control messages such as `end_interview`, `skip_question` and `repeat_question` sent during that time are handled only after processing finishes.
 
 ---
 
