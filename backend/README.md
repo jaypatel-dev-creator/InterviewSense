@@ -105,11 +105,11 @@ The conversation summary is a plain-text log of prior Q&A appended after each tu
 
 | Type | When used |
 |---|---|
-| `drill_down` | Answer was correct but shallow — go deeper |
-| `follow_up` | Partial answer — probe the gap |
+| `drill_down` | Answer was vague or partially correct — probe further |
+| `follow_up` | Answer was good — explore the same topic deeper |
 | `new_topic` | Strong answer — move on |
 | `reframe` | Wrong answer — try a different angle |
-| `wrap_up` | Last question — close the session |
+| `wrap_up` | Allowed by the output schema but never offered in the prompt; the end of the interview is detected in code (`next_question_number > question_count`) |
 
 **`report_generator_node`**
 Single Gemini call at session end. Reads `communication_score` directly from `SessionState` — computed once in `finalize_session()` and passed into the graph via `graph.ainvoke()`. No score recomputation inside the node. Generates a structured improvement plan in plain text: overall summary, top 3 weak topics, top 2 strengths, study recommendations, communication feedback, next mock interview goal.
@@ -299,4 +299,4 @@ backend/
 ├── main.py                   # App factory, lifespan, startup
 ├── requirements.txt
 └── .env.example
-```
+```p

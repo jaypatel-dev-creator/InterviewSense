@@ -15,7 +15,7 @@ async def process_audio_chunk(
     sample_rate: int = 16000,
 ) -> dict:
    
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     logger.debug("Starting Whisper transcription.")
 
