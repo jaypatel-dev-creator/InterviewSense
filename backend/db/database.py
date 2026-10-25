@@ -19,12 +19,6 @@ _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-def _get_engine() -> AsyncEngine:
-    if _engine is None:
-        raise RuntimeError("Database not initialized. Call init_db() on startup.")
-    return _engine
-
-
 def _get_session_factory() -> async_sessionmaker[AsyncSession]:
     if _session_factory is None:
         raise RuntimeError("Database not initialized. Call init_db() on startup.")
@@ -32,17 +26,6 @@ def _get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 async def init_db() -> None:
-    """
-    Initializes the async SQLAlchemy engine, session factory, and creates
-    all tables via Base.metadata.create_all. Called once at application startup.
-
-    Uses sqlite+aiosqlite as the async driver — aiosqlite stays in requirements,
-    SQLAlchemy uses it under the hood via the connection URL.
-
-    Switching to Postgres for deployment: change the URL to
-    postgresql+asyncpg://... and update requirements. models.py and queries.py
-    don't change at all.
-    """
     global _engine, _session_factory
 
     settings = get_settings()
@@ -68,14 +51,9 @@ async def init_db() -> None:
         bind=_engine,
         class_=AsyncSession,
         expire_on_commit=False,
-        # expire_on_commit=False — ORM objects stay accessible after commit
-        # without needing an active session. Required here because queries.py
-        # returns plain dicts converted from ORM objects after session closes.
     )
 
-    # Create all tables defined in models.py — equivalent to Alembic's
-    # initial migration but without the migration history overhead.
-    # Safe to call on every startup — CREATE TABLE IF NOT EXISTS semantics.
+   
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -84,15 +62,6 @@ async def init_db() -> None:
 
 @asynccontextmanager
 async def get_db():
-    """
-    Async context manager yielding an AsyncSession.
-
-    Usage (identical to old aiosqlite pattern — callers don't change):
-        async with await get_db() as db:
-            await some_query(db, ...)
-
-    The session commits automatically on clean exit and rolls back on exception.
-    """
     factory = _get_session_factory()
     async with factory() as session:
         try:
