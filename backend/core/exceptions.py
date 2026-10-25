@@ -60,6 +60,15 @@ async def interviewsense_exception_handler(
         logger.warning(
             f"{exc.__class__.__name__} on {request.method} {request.url.path}: {exc.message}"
         )
+    if exc.status_code >= 500:
+        # Full detail is logged above; the client only gets a generic message.
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": "InternalServerError",
+                "message": "Something went wrong. Please try again.",
+            },
+        )
     return JSONResponse(
         status_code=exc.status_code,
         content={

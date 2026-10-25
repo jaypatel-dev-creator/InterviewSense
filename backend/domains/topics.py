@@ -159,7 +159,6 @@ SEED_TOPICS: dict[str, list[str]] = {
 }
 
 
-QUESTION_COUNT_OPTIONS = [5, 8, 10]
 
 DIFFICULTY_INSTRUCTIONS: dict[str, str] = {
     Difficulty.EASY: (

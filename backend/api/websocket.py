@@ -181,23 +181,23 @@ async def handle_interview_websocket(
         logger.info(f"WebSocket disconnected — session: {session_id}")
 
     except TranscriptionException as e:
-        logger.error(f"Transcription failed — session {session_id}: {e.message}")
+        logger.error(f"Transcription failed — session {session_id}: {e.message}", exc_info=True)
         try:
             await websocket.send_json({
                 "type": "error",
                 "error_code": "TRANSCRIPTION_FAILED",
-                "message": e.message,
+                "message": "Transcription failed. Please try again.",
             })
         except Exception:
             pass
 
     except AgentException as e:
-        logger.error(f"Agent failed — session {session_id}: {e.message}")
+        logger.error(f"Agent failed — session {session_id}: {e.message}", exc_info=True)
         try:
             await websocket.send_json({
                 "type": "error",
                 "error_code": "AGENT_FAILED",
-                "message": e.message,
+                "message": "Something went wrong while processing your answer. Please try again.",
             })
         except Exception:
             pass
