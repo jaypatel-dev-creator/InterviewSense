@@ -1,6 +1,7 @@
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     AsyncEngine,
@@ -55,6 +56,13 @@ async def init_db() -> None:
         echo=False,           # set True temporarily to debug SQL queries
         future=True,
     )
+
+    # SQLite ignores foreign keys unless this pragma is set on every connection.
+    @event.listens_for(_engine.sync_engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
     _session_factory = async_sessionmaker(
         bind=_engine,

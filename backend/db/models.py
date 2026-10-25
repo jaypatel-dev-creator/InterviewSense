@@ -38,7 +38,7 @@ class Session(Base):
     )
 
 
-class Turn(Base):
+class Turn(Base):d
     __tablename__ = "turns"
 
     turn_id: Mapped[str] = mapped_column(String, primary_key=True)
