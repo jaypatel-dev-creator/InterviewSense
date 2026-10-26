@@ -40,17 +40,12 @@ GOOGLE_API_KEY=your_gemini_key
 GROQ_API_KEY=your_groq_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 ELEVENLABS_VOICE_ID=your_voice_design_voice_id
-LANGCHAIN_API_KEY=your_langsmith_key       # optional
-LANGCHAIN_TRACING_V2=true                  # optional
-LANGCHAIN_PROJECT=interviewsense           # optional
 APP_ENV=development
 SQLITE_DB_PATH=./data/sessions/interviewsense.db
 ALLOWED_ORIGINS=["http://localhost:5173"]  # override for deployment
 ```
 
 > `ELEVENLABS_VOICE_ID` is required — the app will refuse to start without it. Library voices are blocked on the ElevenLabs free tier. Create a custom voice via Voice Design and copy its ID.
-
-> **LangSmith tracing (optional):** When `LANGCHAIN_API_KEY` and `LANGCHAIN_TRACING_V2=true` are set, LangSmith auto-instruments all LangGraph node executions and Gemini calls with zero code changes. Every turn's evaluator-router call, JD skill extraction, and report generation appears in your LangSmith dashboard at [smith.langchain.com](https://smith.langchain.com) with full input/output, latency breakdown, and token usage per node. Set `LANGCHAIN_PROJECT` to group runs under a named project. No other configuration required.
 
 ### 4. Run
 
@@ -96,8 +91,8 @@ Single Gemini call with structured Pydantic output (`EvaluatorRouterOutput`). In
 - Scores the candidate's answer (0–10)
 - Identifies strengths and missing concepts
 - Identifies which JD skill the current question was testing (`jd_skill_targeted`)
-- Decides the next question type (`drill_down`, `follow_up`, `new_topic`, `reframe`, `wrap_up`)
-- Generates the exact next question text, informed by a rolling conversation summary
+- Decides the next question type (`drill_down`, `follow_up`, `new_topic`, `reframe`)
+- Generates the exact next question text, informed by a rolling conversation summary (left empty on the final question, where no next question is needed)
 
 The conversation summary is a plain-text log of prior Q&A appended after each turn — no extra LLM call. It gives the evaluator context about how the candidate answered previous questions when generating the next one.
 
@@ -109,10 +104,9 @@ The conversation summary is a plain-text log of prior Q&A appended after each tu
 | `follow_up` | Answer was good — explore the same topic deeper |
 | `new_topic` | Strong answer — move on |
 | `reframe` | Wrong answer — try a different angle |
-| `wrap_up` | Allowed by the output schema but never offered in the prompt; the end of the interview is detected in code (`next_question_number > question_count`) |
 
 **`report_generator_node`**
-Single Gemini call at session end. Reads `communication_score` directly from `SessionState` — computed once in `finalize_session()` and passed into the graph via `graph.ainvoke()`. No score recomputation inside the node. Generates a structured improvement plan in plain text: overall summary, top 3 weak topics, top 2 strengths, study recommendations, communication feedback, next mock interview goal.
+Single Gemini call at session end. Reads `technical_score` and `communication_score` directly from `SessionState` — both computed once in `finalize_session()` and passed into the graph via `graph.ainvoke()`. No score recomputation inside the node. Generates a structured improvement plan in plain text: overall summary, top 3 weak topics, top 2 strengths, study recommendations, communication feedback, next mock interview goal.
 
 ---
 
@@ -121,7 +115,7 @@ Single Gemini call at session end. Reads `communication_score` directly from `Se
 ```
 Binary WebSocket frame (Float32Array)
     │
-    └── process_audio_chunk()  ─── ThreadPoolExecutor
+    └── process_audio_chunk()  ─── awaits the async Groq client
             └── Groq Whisper v3 Turbo  — transcription + word-level timestamps
                     │
                     └── extract_speech_features()  — pure Python, no model
@@ -137,9 +131,9 @@ All speech metrics are derived entirely from Whisper word-level timestamps. No s
 
 ## WebSocket Protocol
 
-**Connection:** `ws://localhost:8000/ws/interview/{session_id}?domain=&difficulty=&question_count=&jd_text=&candidate_name=`
+**Connection:** `ws://localhost:8000/ws/interview/{session_id}`
 
-Domain and difficulty are validated before the connection is accepted — invalid values are rejected with close code `1008`.
+Create the session first with `POST /api/sessions`. The WebSocket loads the session's domain, difficulty, question count, JD and candidate name from the database, so none of them travel in the URL. An unknown `session_id` is rejected with close code `1008`; the other fields are validated when the session is created.
 
 ### Client → Server
 
@@ -158,7 +152,7 @@ Domain and difficulty are validated before the connection is accepted — invali
 | `{"type": "question", "question": "...", "question_number": N, "question_count": N}` | New question |
 | `{"type": "transcript_update", "text": "...", "speech_metrics": {...}}` | Live transcript + metrics |
 | `{"type": "report_ready", "report": {...}, "turns": [...]}` | Session complete |
-| `{"type": "error", "error_code": "...", "message": "..."}` | Typed error — `TRANSCRIPTION_FAILED`, `AGENT_FAILED`, `INTERNAL_ERROR` |
+| `{"type": "error", "error_code": "...", "message": "..."}` | Typed error. `INVALID_MESSAGE`, `TRANSCRIPTION_FAILED` and `AGENT_FAILED` leave the session open so the client can retry; `INTERNAL_ERROR` ends it |
 
 ---
 
@@ -185,9 +179,7 @@ elif wpm > 160: score = 10.0 - (wpm - 160) * (8.0 / 60)
 
 # Composite — weights depend on available metrics
 # Full voice (≥ half questions with mic): 60/25/15
-# Comm only: 75/25
-# Pacing only: 85/15
-# Text only: Technical 100%
+# Text only (Communication and Pacing N/A): Technical 100%
 ```
 
 N/A threshold: fewer than `ceil(question_count / 2)` voice answers → Communication and Pacing set to N/A.
@@ -216,12 +208,12 @@ Sessions without a JD set `jd_coverage` to `null` — the frontend renders nothi
 
 ## Database Schema
 
-SQLAlchemy async ORM with `Base.metadata.create_all` at startup. Tables are created automatically — no manual migration needed for local development.
+SQLAlchemy async ORM with `Base.metadata.create_all` at startup. Tables are created automatically on first startup. `create_all` does not alter existing tables, so after a schema change delete the local database file (or add the new columns by hand).
 
 | Table | Key columns |
 |---|---|
 | `sessions` | `session_id`, `domain`, `difficulty`, `question_count`, `candidate_name`, `jd_text`, `start_time`, `end_time`, `composite_score` |
-| `turns` | `turn_id`, `session_id`, `question_text`, `answer_transcript`, `correctness_score`, `speech_metrics` (JSON), `next_question_type`, `jd_skill_targeted`, `timestamp`, `skipped` |
+| `turns` | `turn_id`, `session_id`, `question_text`, `answer_transcript`, `correctness_score`, `speech_metrics` (JSON), `next_question_type`, `jd_skill_targeted`, `missing_concepts` (JSON), `strengths` (JSON), `difficulty_adjustment`, `timestamp`, `skipped` |
 | `reports` | `report_id`, `session_id`, `technical_score`, `communication_score`, `pacing_score`, `composite_score`, `weak_topics` (JSON), `jd_coverage` (JSON), `improvement_plan_text`, `langsmith_trace_url`, `created_at` |
 
 ---
@@ -237,7 +229,7 @@ SQLAlchemy async ORM with `Base.metadata.create_all` at startup. Tables are crea
 | `DELETE` | `/api/sessions` | Clear all sessions |
 | `GET` | `/api/sessions/{id}/turns` | Get turns for a session |
 | `GET` | `/api/sessions/{id}/report` | Get report for a session |
-| `POST` | `/api/tts` | Text-to-speech via ElevenLabs |
+| `POST` | `/api/tts` | Text-to-speech via ElevenLabs (text must be 1–2000 characters) |
 | `GET` | `/api/health` | Health check |
 | `WS` | `/ws/interview/{id}` | Interview WebSocket |
 
@@ -264,7 +256,7 @@ backend/
 │   ├── evaluator_router.py   # Evaluator-Router LangGraph node
 │   ├── llm.py                # Gemini LLM singleton
 │   ├── orchestrator.py       # Graph compilation + get_graph() singleton
-│   ├── report_generator.py   # Report Generator LangGraph node — reads communication_score from state
+│   ├── report_generator.py   # Report Generator LangGraph node — reads technical_score and communication_score from state
 │   ├── speech_analytics.py   # Speech Analytics LangGraph node
 │   └── state.py              # SessionState + Turn TypedDicts
 ├── api/
@@ -292,6 +284,7 @@ backend/
 │   ├── evaluator_output.py   # EvaluatorRouterOutput Pydantic model
 │   ├── report.py             # ReportResponse schema
 │   ├── session.py            # SessionResponse schema
+│   ├── tts.py                # TTSRequest schema (1–2000 characters)
 │   └── turn.py               # TurnResponse + SpeechMetrics schemas
 ├── services/
 │   ├── elevenlabs.py         # ElevenLabs async client singleton
@@ -299,4 +292,4 @@ backend/
 ├── main.py                   # App factory, lifespan, startup
 ├── requirements.txt
 └── .env.example
-```p
+```

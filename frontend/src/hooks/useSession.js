@@ -30,13 +30,7 @@ export function useSession() {
         candidateName: formData.candidateName,
       })
 
-      connect(session.session_id, {
-        domain: formData.domain,
-        difficulty: formData.difficulty,
-        questionCount: formData.questionCount,
-        jdText: formData.jdText,
-        candidateName: formData.candidateName,
-      })
+      connect(session.session_id)
 
       setScreen('interview')
     } catch (err) {

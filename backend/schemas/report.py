@@ -10,8 +10,6 @@ class ReportResponse(BaseModel):
     composite_score: float | None      # weighted: technical 60%, communication 25%, pacing 15%
     weak_topics: list[str]
     jd_coverage: dict | None = None
-    # {"tested": [...], "not_tested": [...], "coverage_pct": float}
-    # null when no JD was provided for the session
     improvement_plan_text: str | None
     langsmith_trace_url: str | None
     created_at: str

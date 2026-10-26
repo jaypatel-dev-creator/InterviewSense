@@ -54,6 +54,9 @@ class Turn(Base):
     next_question_type: Mapped[str | None] = mapped_column(String, nullable=True)
     jd_skill_targeted: Mapped[str | None] = mapped_column(String, nullable=True)
     # Which JD skill this question was designed to test — null if no JD provided
+    missing_concepts: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    strengths: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    difficulty_adjustment: Mapped[str | None] = mapped_column(String, nullable=True)
     timestamp: Mapped[str] = mapped_column(String, nullable=False)
     skipped: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 

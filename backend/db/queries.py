@@ -109,8 +109,11 @@ async def insert_turn(db: AsyncSession, turn: dict) -> None:
         # JSON column — SQLAlchemy serializes dict automatically. No json.dumps needed.
         next_question_type=turn.get("next_question_type"),
         jd_skill_targeted=turn.get("jd_skill_targeted"),
+        missing_concepts=turn.get("missing_concepts", []),
+        strengths=turn.get("strengths", []),
+        difficulty_adjustment=turn.get("difficulty_adjustment"),
         timestamp=turn["timestamp"],
-        skipped=turn.get("skipped"),
+        skipped=bool(turn.get("skipped")),
     ))
     await db.flush()
     logger.debug(f"Turn inserted: {turn['turn_id']}")
@@ -132,8 +135,9 @@ async def get_turns_by_session(
 
 async def insert_report(db: AsyncSession, report: dict) -> None:
     # INSERT OR IGNORE equivalent — skip if report for this session already exists.
-    # Prevents duplicate report inserts when _finalize_session is called twice
-    # (e.g. end_interview message arrives while last turn is still processing).
+    # Keeps finalize_session idempotent: if it runs again for the same session (a retry
+    # after a failed run, or a reconnect with the same session_id), the existing report
+    # is kept instead of violating the unique constraint on session_id.
     existing = await db.execute(
         select(Report).where(Report.session_id == report["session_id"])
     )
@@ -201,8 +205,11 @@ def _turn_to_dict(t: Turn) -> dict:
         # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
         "next_question_type": t.next_question_type,
         "jd_skill_targeted": t.jd_skill_targeted,
+        "missing_concepts": t.missing_concepts or [],
+        "strengths": t.strengths or [],
+        "difficulty_adjustment": t.difficulty_adjustment,
         "timestamp": t.timestamp,
-        "skipped": t.skipped,
+        "skipped": bool(t.skipped),
     }
 
 

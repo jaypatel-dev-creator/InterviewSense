@@ -1,15 +1,7 @@
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
 
-export function buildInterviewWSUrl(sessionId, params) {
-  const query = new URLSearchParams({
-    domain: params.domain,
-    difficulty: params.difficulty,
-    question_count: params.questionCount,
-    ...(params.jdText && { jd_text: params.jdText }),
-    ...(params.candidateName && { candidate_name: params.candidateName }),
-  }).toString()
-
-  return `${WS_URL}/ws/interview/${sessionId}?${query}`
+export function buildInterviewWSUrl(sessionId) {
+  return `${WS_URL}/ws/interview/${sessionId}`
 }
 
 export class InterviewWebSocket {
@@ -66,5 +58,3 @@ export class InterviewWebSocket {
     this.ws?.close()
   }
 }
-
-

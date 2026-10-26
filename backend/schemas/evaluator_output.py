@@ -19,7 +19,7 @@ class EvaluatorRouterOutput(BaseModel):
     jd_skill_targeted: str | None = Field(
         default=None,
         description=(
-            "The specific JD skill this question was designed to test. "
+            "The specific JD skill the CURRENT question (the one the candidate just answered) was designed to test. "
             "Must be one of the provided JD skills exactly as given, or null "
             "if no JD was provided or no skill maps to this question."
         )
@@ -31,12 +31,11 @@ class EvaluatorRouterOutput(BaseModel):
         "follow_up",
         "drill_down",
         "reframe",
-        "wrap_up",
     ] = Field(
         description="Type of next question to ask based on performance"
     )
     next_question_text: str = Field(
-        description="The exact next question to ask the candidate"
+        description="The exact next question to ask the candidate. Empty string if the current question was the final one."
     )
     difficulty_adjustment: Literal["increase", "maintain", "decrease"] = Field(
         description="Whether to adjust difficulty for the next question"

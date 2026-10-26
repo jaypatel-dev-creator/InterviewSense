@@ -1,65 +1,70 @@
-from agents.state import SessionState
-from agents.llm import get_llm
-from prompts.report_generator import build_report_prompt
-from core.logging import get_logger
-from core.exceptions import AgentException
+def build_report_prompt(
+    domain: str,
+    difficulty: str,
+    candidate_name: str | None,
+    turns: list[dict],
+    avg_technical_score: float,
+    avg_speech_score: float | None,
+) -> str:
+    name = candidate_name or "the candidate"
 
-logger = get_logger(__name__)
+    # avg_speech_score is None when fewer than half the answers were spoken — do not
+    # show the LLM a fake number to quote.
+    if avg_speech_score is None:
+        speech_line = "- Average Speech Score: not available (fewer than half the answers were spoken)"
+        communication_instruction = (
+            "Communication and delivery feedback. No speech score was computed because fewer than "
+            "half the answers were spoken, so do not mention or invent a communication score."
+        )
+    else:
+        speech_line = f"- Average Speech Score: {avg_speech_score:.1f}/10"
+        communication_instruction = (
+            f"Communication and delivery feedback. The computed communication score is "
+            f"{avg_speech_score:.1f}/10 — reference this exact number, do not invent a different score."
+        )
 
+    turns_summary = ""
+    for i, turn in enumerate(turns, 1):
+        if turn.get("skipped"):
+            turns_summary += f"""
+Q{i}: {turn.get("question_text", "")}
+Answer: [Skipped by the candidate. No answer given.]
+Score: not scored
+---"""
+            continue
+        turns_summary += f"""
+Q{i}: {turn.get("question_text", "")}
+Answer: {turn.get("answer_transcript", "No answer recorded")}
+Score: {turn.get("correctness_score", 0)}/10
+Missing: {", ".join(turn.get("missing_concepts", [])) or "none"}
+Strengths: {", ".join(turn.get("strengths", [])) or "none"}
+---"""
 
-async def report_generator_node(state: SessionState) -> dict:
-    """
-    Report Generator Node — single LLM call at session end.
-    Reads full session state, generates written improvement plan.
+    return f"""You are an expert technical interview coach generating a post-interview report.
 
-    communication_score is read directly from state — computed once in
-    finalize_session() via _compute_communication_score() and passed into
-    the graph. No recomputation here, single source of truth.
-    """
-    logger.debug("Report generator node executing.")
+INTERVIEW SUMMARY:
+- Candidate: {name}
+- Domain: {domain.replace("_", " ").title()}
+- Difficulty: {difficulty.upper()}
+- Average Technical Score: {avg_technical_score:.1f}/10
+{speech_line}
 
-    llm = get_llm()
-    turns = state.get("turns", [])
+QUESTION-BY-QUESTION BREAKDOWN:
+{turns_summary}
 
-    technical_scores = [
-        t.get("correctness_score", 0.0)
-        for t in turns
-        if t.get("correctness_score") is not None
-    ]
-    avg_technical = sum(technical_scores) / len(technical_scores) if technical_scores else 0.0
+YOUR TASK:
+Generate a detailed, honest, and actionable improvement plan for {name}.
 
-    # Read communication_score from state — set by finalize_session() before
-    # graph.ainvoke(). None when fewer than half the turns had voice answers.
-    avg_speech = state.get("communication_score") or 0.0
+Include:
+1. Overall performance summary (2-3 sentences, direct and honest)
+2. Top 3 weak topics with specific explanation of what was missing
+3. Top 2 strengths to build on
+4. Concrete study recommendations for each weak topic (specific resources, concepts to review)
+5. {communication_instruction}
+6. One specific goal for their next mock interview
 
-    prompt = build_report_prompt(
-        domain=state["domain"],
-        difficulty=state["difficulty"],
-        candidate_name=state.get("candidate_name"),
-        turns=turns,
-        avg_technical_score=avg_technical,
-        avg_speech_score=avg_speech,
-    )
+Tone: Direct, constructive, like a senior engineer giving real feedback.
+Do NOT sugarcoat. Do NOT be vague. Every recommendation must be actionable.
 
-    try:
-        response = await llm.ainvoke(prompt)
-        logger.debug(f"Raw response.content type: {type(response.content)}, value: {repr(response.content)[:300]}")
-        raw = response.content
-        if isinstance(raw, list):
-            improvement_plan = "".join(
-                part.get("text", "") if isinstance(part, dict) else
-                (part.text if hasattr(part, "text") else "")
-                for part in raw
-            ).strip()
-        elif isinstance(raw, str):
-            improvement_plan = raw.strip()
-        else:
-            improvement_plan = str(raw).strip()
-    except Exception as e:
-        raise AgentException(f"Report generator LLM call failed: {str(e)}")
-
-    logger.debug("Report generation complete.")
-
-    return {
-        "improvement_plan_text": improvement_plan,
-    }
+Respond with plain text. No JSON. No markdown headers. Write in paragraphs.
+"""

@@ -1,7 +1,7 @@
 import io
 import numpy as np
 import soundfile as sf
-from groq import Groq
+from groq import AsyncGroq
 from core.config import get_settings
 from core.logging import get_logger
 from core.exceptions import TranscriptionException
@@ -10,8 +10,13 @@ logger = get_logger(__name__)
 
 GROQ_MODEL = "whisper-large-v3-turbo"
 
+# Whisper cleans up "um" and "uh" unless the prompt shows it that disfluencies are wanted.
+# Without this hint the filler word count is undercounted. Remove it if prompt text
+# ever appears in transcripts of silent or near-silent audio.
+WHISPER_PROMPT = "Umm, let me think like, hmm... Okay, so, uh, here's what I'm, you know, thinking."
+
 # Module-level singleton — initialized once at startup
-_groq_client: Groq | None = None
+_groq_client: AsyncGroq | None = None
 
 
 def load_whisper() -> None:
@@ -22,11 +27,11 @@ def load_whisper() -> None:
     """
     global _groq_client
     settings = get_settings()
-    _groq_client = Groq(api_key=settings.groq_api_key)
+    _groq_client = AsyncGroq(api_key=settings.groq_api_key)
     logger.info(f"Groq STT client initialized — model: {GROQ_MODEL}")
 
 
-def get_groq_client() -> Groq:
+def get_groq_client() -> AsyncGroq:
     if _groq_client is None:
         raise RuntimeError("Groq client not initialized. Call load_whisper() on startup.")
     return _groq_client
@@ -45,7 +50,7 @@ def _numpy_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
     return buffer.read()
 
 
-def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
+async def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
     """
     Transcribes a mono float32 numpy audio array via Groq Whisper API.
 
@@ -70,10 +75,11 @@ def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
     wav_bytes = _numpy_to_wav_bytes(audio_chunk, sample_rate)
 
     try:
-        response = client.audio.transcriptions.create(
+        response = await client.audio.transcriptions.create(
             file=("audio.wav", wav_bytes, "audio/wav"),
             model=GROQ_MODEL,
             language="en",
+            prompt=WHISPER_PROMPT,
             response_format="verbose_json",
             timestamp_granularities=["word"],
         )

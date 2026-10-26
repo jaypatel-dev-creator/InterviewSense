@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from domains.topics import Domain, Difficulty
 
 
@@ -6,8 +6,8 @@ class SessionCreateRequest(BaseModel):
     candidate_name: str | None = None
     domain: Domain
     difficulty: Difficulty
-    question_count: int = 5
-    jd_text: str | None = None
+    question_count: int = Field(default=5, ge=1, le=10)
+    jd_text: str | None = Field(default=None, max_length=10_000)
 
 
 class SessionResponse(BaseModel):

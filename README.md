@@ -137,7 +137,7 @@ Voice activity detection runs in the browser via an RMS energy threshold. This w
 InterviewSense is currently designed for local use only. Reasons:
 - **Microphone needs a secure context.** Browsers expose `getUserMedia` only over HTTPS or on `localhost`. Served over plain HTTP from a remote host, mic capture will not work.
 - **No authentication.** Any client that can reach the API can create, read, and delete sessions, and `DELETE /api/sessions` clears all of them.
-- **`/api/tts` is an unauthenticated proxy** to ElevenLabs with no input length limit — exposed publicly, it would burn the monthly character quota.
+- **`/api/tts` is an unauthenticated proxy** to ElevenLabs. Each request is capped at 2,000 characters, but exposed publicly it could still burn the monthly character quota.
 - **In-progress session state lives in process memory.** The LangGraph state is held in the WebSocket handler with no checkpointer, so a disconnect or server restart loses an unfinished session.
 
 CORS origins are configurable via the `ALLOWED_ORIGINS` environment variable.
@@ -151,24 +151,20 @@ The candidate's transcript and the pasted job description are inserted into the 
 **10. Deprecated audio capture API**
 The browser recorder uses `ScriptProcessorNode`, which is deprecated in favour of `AudioWorklet` and runs on the main thread. It works in current browsers, but should be migrated to an `AudioWorklet`.
 
-**11. JD text travels in the WebSocket URL**
-`jd_text` is sent as a query parameter on the WebSocket connection, so long job descriptions can hit URL length limits, and URLs are commonly written to server logs. The session is already created via `POST /api/sessions`, so the backend could load the JD from the database by `session_id` instead.
-
-
-**12. Pause detection has a limited window**
+**11. Pause detection has a limited window**
 A pause counts as "long" when the gap between two Whisper words exceeds 1.5s. The recorder ends and sends the answer after 4s of silence, so only pauses between 1.5s and 4s are ever counted — a longer pause ends the recording and never appears in a transcript. Pause counts also depend on Whisper's word timestamps, which can be imprecise around silence, so the metric may under-report. The Communication score's pause component should be read with that in mind.
 
 
-**13. Scoring is LLM-judged and non-deterministic**
+**12. Scoring is LLM-judged and non-deterministic**
 Technical correctness is scored by a single Gemini call per answer with no reference answers, and one model instance at temperature 0.7 serves question generation, grading and report writing. The same answer can receive different scores across runs. Lowering the temperature is not a clean fix: Google recommends leaving Gemini 3.x models at their default temperature, so a stricter scoring rubric in the prompt is the better mitigation.
 
-**14. Ending early penalises unanswered questions**
-The technical score is averaged over the configured `question_count`, so ending an interview early counts the unreached questions as zeros. The report-generator prompt averages over scored turns only, so the figure the LLM sees can differ from the final score.
+**13. Ending early penalises unanswered questions**
+The technical score is averaged over the configured `question_count`, so ending an interview early counts the unreached questions as zeros.
 
-**15. Skipped questions are replaced without context**
+**14. Skipped questions are replaced without context**
 A skipped question is replaced by a new one generated from the seed topics with no knowledge of the questions already asked, so it can repeat a topic that was already covered.
 
-**16. Answer processing blocks the WebSocket loop**
+**15. Answer processing blocks the WebSocket loop**
 Transcription and evaluation (roughly 4–8 seconds of Groq and Gemini calls) are awaited inside the WebSocket receive loop. Control messages such as `end_interview`, `skip_question` and `repeat_question` sent during that time are handled only after processing finishes.
 
 ---
@@ -185,7 +181,7 @@ Switch from Groq Whisper (batch transcription) to Deepgram streaming STT. Word-l
 Replace the browser-side RMS energy threshold with a lightweight ONNX build of Silero VAD running in the browser via `onnxruntime-web`. Same browser-side architecture, neural accuracy, no server round-trip. Eliminates misfires in noisy environments and early cutoffs on soft-spoken answers.
 
 **4. Deployment — Docker + HTTPS + auth**
-Containerise backend and frontend with Docker Compose, serve over HTTPS (required for browser microphone access), add authentication, and validate/rate-limit `/api/tts`. CORS origins are already configurable via `ALLOWED_ORIGINS`.
+Containerise backend and frontend with Docker Compose, serve over HTTPS (required for browser microphone access), add authentication, and rate-limit `/api/tts`. CORS origins are already configurable via `ALLOWED_ORIGINS`.
 
 **5. Persistent user profiles**
 Track score history across sessions — technical score trend per domain, communication score over time, filler word frequency improvement. Currently each session is isolated; the DB schema already stores all the data needed, it just isn't aggregated across sessions in the frontend.
@@ -202,7 +198,6 @@ See [`backend/README.md`](backend/README.md) for backend setup and [`frontend/RE
 - Google Gemini — [aistudio.google.com](https://aistudio.google.com)
 - Groq — [console.groq.com](https://console.groq.com)
 - ElevenLabs — [elevenlabs.io](https://elevenlabs.io) (free tier; requires custom Voice Design voice — library voices are blocked on free tier)
-- LangSmith — [smith.langchain.com](https://smith.langchain.com) (optional, for tracing)
 
 ---
 

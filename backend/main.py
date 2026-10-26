@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, Query
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import get_settings
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
         description="Voice-native AI interview coach",
         version="1.0.0",
         docs_url="/docs" if settings.app_env == "development" else None,
+        openapi_url="/openapi.json" if settings.app_env == "development" else None,
         redoc_url=None,
         lifespan=lifespan,
     )
@@ -82,21 +83,5 @@ app = create_app()
 
 
 @app.websocket("/ws/interview/{session_id}")
-async def interview_websocket(
-    websocket: WebSocket,
-    session_id: str,
-    domain: str = Query(...),
-    difficulty: str = Query(...),
-    question_count: int = Query(default=5),
-    jd_text: str = Query(default=None),
-    candidate_name: str = Query(default=None),
-):
-    await handle_interview_websocket(
-        websocket=websocket,
-        session_id=session_id,
-        domain=domain,
-        difficulty=difficulty,
-        question_count=question_count,
-        jd_text=jd_text,
-        candidate_name=candidate_name,
-    )
+async def interview_websocket(websocket: WebSocket, session_id: str):
+    await handle_interview_websocket(websocket=websocket, session_id=session_id)

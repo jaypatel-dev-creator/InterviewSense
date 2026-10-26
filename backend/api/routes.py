@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from schemas.session import SessionCreateRequest, SessionResponse
 from schemas.report import ReportResponse
 from schemas.turn import TurnResponse, SpeechMetrics
+from schemas.tts import TTSRequest
 from db.database import get_db
 from db.queries import (
     insert_session,
@@ -113,14 +114,14 @@ async def get_report(session_id: str):
 # --- TTS Proxy ---
 
 @router.post("/tts")
-async def text_to_speech(payload: dict):
+async def text_to_speech(payload: TTSRequest):
     settings = get_settings()
     client = get_elevenlabs_client()
 
     try:
         audio_bytes = b""
         async for chunk in client.text_to_speech.convert(
-            text=payload.get("text", ""),
+            text=payload.text,
             voice_id=settings.elevenlabs_voice_id,
             model_id="eleven_flash_v2_5",
             output_format="mp3_44100_128",

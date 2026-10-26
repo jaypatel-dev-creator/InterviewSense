@@ -11,8 +11,8 @@ export function useWebSocket() {
   const { setQuestion, updateLiveTranscript, setLastEvaluation, setReport, setTurns } = useSessionStore()
   const { setAISpeaking, setProcessing, setError, setScreen } = useUIStore()
 
-  const connect = useCallback((sessionId, params) => {
-    const url = buildInterviewWSUrl(sessionId, params)
+  const connect = useCallback((sessionId) => {
+    const url = buildInterviewWSUrl(sessionId)
 
     _wsInstance = new InterviewWebSocket(url, {
       onOpen: () => {

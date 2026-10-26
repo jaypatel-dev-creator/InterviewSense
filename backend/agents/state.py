@@ -62,3 +62,8 @@ class SessionState(TypedDict):
     # fluency metrics (filler rate + pause count) and passed into the graph so
     # report_generator_node can read it without recomputing.
     communication_score: float | None
+
+    # Technical score — computed once in finalize_session() (average correctness over
+    # question_count, so skipped questions count as zero) and passed into the graph so
+    # the report prompt quotes the same number as the report card.
+    technical_score: float | None

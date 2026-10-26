@@ -21,5 +21,8 @@ class TurnResponse(BaseModel):
     speech_metrics: SpeechMetrics | None
     next_question_type: str | None
     jd_skill_targeted: str | None = None  # JD skill this question was designed to test
+    missing_concepts: list[str] = []
+    strengths: list[str] = []
+    difficulty_adjustment: str | None = None
     timestamp: str
-    skipped: bool | None = None  # True when question was skipped — no answer, no evaluation
+    skipped: bool = False  # True when question was skipped — no answer, no evaluation

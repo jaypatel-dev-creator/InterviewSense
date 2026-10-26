@@ -123,6 +123,24 @@ def _compute_communication_score(speech_metrics: dict) -> float:
     return round(min(10.0, weighted), 2)
 
 
+def _rank_weak_topics(turns: list) -> list[str]:
+    """
+    Unique missing concepts across all turns, most frequent first.
+    Matching ignores case and surrounding spaces; ties keep first-seen order.
+    """
+    counts: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    for t in turns:
+        for concept in t.get("missing_concepts", []):
+            label = concept.strip()
+            if not label:
+                continue
+            key = label.lower()
+            counts[key] = counts.get(key, 0) + 1
+            labels.setdefault(key, label)
+    return [labels[key] for key in sorted(counts, key=lambda k: -counts[k])]
+
+
 async def finalize_session(
     websocket: WebSocket,
     state: SessionState,
@@ -169,9 +187,9 @@ async def finalize_session(
     ]
     avg_technical = sum(technical_scores) / question_count if technical_scores else 0.0
 
-    # Communication score — fluency-based (filler rate + pause count).
-    # Guard: wpm > 0 confirms a voice answer was recorded for this turn.
-    # N/A if fewer than half the questions had voice answers.
+    # Communication and pacing scores — both come from the same voice answers
+    # (wpm > 0 confirms a voice answer was recorded for the turn), so they are
+    # computed together. N/A if fewer than half the questions had voice answers.
     voice_turns = [
         t for t in turns
         if t.get("speech_metrics", {}).get("wpm", 0.0) > 0
@@ -181,29 +199,17 @@ async def finalize_session(
             _compute_communication_score(t["speech_metrics"])
             for t in voice_turns
         ) / len(voice_turns)
-    else:
-        avg_communication = None
-
-    # Pacing score — N/A if fewer than half questions had voice answers
-    wpm_turns = [
-        t for t in turns
-        if t.get("speech_metrics", {}).get("wpm", 0.0) > 0
-    ]
-    if len(wpm_turns) >= question_count / 2:
         avg_pacing = sum(
             _compute_pacing_score(t["speech_metrics"]["wpm"])
-            for t in wpm_turns
-        ) / len(wpm_turns)
+            for t in voice_turns
+        ) / len(voice_turns)
     else:
+        avg_communication = None
         avg_pacing = None
 
-    # Composite — redistribute weights when communication or pacing is N/A
+    # Composite — technical score only when the speech scores are N/A
     if avg_communication is not None and avg_pacing is not None:
         composite = round(avg_technical * 0.60 + avg_communication * 0.25 + avg_pacing * 0.15, 2)
-    elif avg_communication is not None:
-        composite = round(avg_technical * 0.75 + avg_communication * 0.25, 2)
-    elif avg_pacing is not None:
-        composite = round(avg_technical * 0.85 + avg_pacing * 0.15, 2)
     else:
         composite = round(avg_technical, 2)
 
@@ -224,11 +230,12 @@ async def finalize_session(
     else:
         jd_coverage = None
 
-    # Pass communication_score into state so report_generator_node reads it
-    # directly — single source of truth, no recomputation inside the graph.
+    # Pass technical_score and communication_score into state so report_generator_node
+    # reads them directly — single source of truth, no recomputation inside the graph.
     result = await graph.ainvoke({
         **state,
         "interview_complete": True,
+        "technical_score": avg_technical,
         "communication_score": avg_communication,
     })
     improvement_plan = (
@@ -243,11 +250,7 @@ async def finalize_session(
         "communication_score": round(avg_communication, 2) if avg_communication is not None else None,
         "pacing_score": round(avg_pacing, 2) if avg_pacing is not None else None,
         "composite_score": composite,
-        "weak_topics": list({
-            concept
-            for t in turns
-            for concept in t.get("missing_concepts", [])
-        }),
+        "weak_topics": _rank_weak_topics(turns),
         "jd_coverage": jd_coverage,
         "improvement_plan_text": improvement_plan,
         "langsmith_trace_url": "",
