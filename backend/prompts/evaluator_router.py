@@ -23,8 +23,8 @@ def build_evaluator_router_prompt(
 The candidate is preparing for a specific role. Target these skills from the job description:
 {", ".join(jd_skills)}
 Prioritize questions that test these skills when selecting new topics.
-When generating the next question, set jd_skill_targeted to the exact JD skill it tests.
-If the next question does not map to any JD skill, set jd_skill_targeted to null.
+Set jd_skill_targeted to the exact JD skill that the CURRENT question (the one the candidate just answered) was testing.
+If the current question does not map to any JD skill, set jd_skill_targeted to null.
 """
     else:
         jd_context = "\nNo JD provided — set jd_skill_targeted to null.\n"
@@ -38,6 +38,15 @@ CONVERSATION HISTORY (previous turns this session):
 {conversation_summary}
 Use this context to avoid repeating topics, build on prior answers, and adapt your follow-up questioning style.
 """
+
+    # The final question needs no follow-up — don't pay for a next question that is never asked
+    if current_question_number >= question_count:
+        next_question_step = (
+            "7. This was the final question of the interview, so no next question is needed. "
+            "Set next_question_text to an empty string."
+        )
+    else:
+        next_question_step = "7. Generate the exact next question text."
 
     return f"""You are a strict but fair technical interviewer conducting a {domain.replace("_", " ").title()} interview.
 
@@ -63,7 +72,7 @@ YOUR TASK:
    - "drill_down" — candidate was vague or partially correct, probe further
    - "reframe" — candidate completely misunderstood, approach the concept differently
    - "new_topic" — candidate answered well enough, move to a new topic
-7. Generate the exact next question text.
+{next_question_step}
 8. Decide difficulty adjustment for the next question.
 
 Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.

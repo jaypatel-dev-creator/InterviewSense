@@ -1,107 +1,73 @@
-import random
-from domains.topics import Difficulty, DIFFICULTY_INSTRUCTIONS
+from agents.state import SessionState
+from agents.llm import get_llm
+from schemas.evaluator_output import EvaluatorRouterOutput
+from prompts.evaluator_router import build_evaluator_router_prompt
+from core.logging import get_logger
+from core.exceptions import AgentException
+
+logger = get_logger(__name__)
 
 
-def build_evaluator_router_prompt(
-    domain: str,
-    difficulty: str,
-    question_text: str,
-    answer_transcript: str,
-    topics_covered: list[str],
-    current_question_number: int,
-    question_count: int,
-    jd_skills: list[str],
-    conversation_summary: str = "",
-) -> str:
-    difficulty_instruction = DIFFICULTY_INSTRUCTIONS.get(
-        difficulty, DIFFICULTY_INSTRUCTIONS[Difficulty.MEDIUM]
+async def evaluator_router_node(state: SessionState) -> dict:
+    """
+    Evaluator-Router Node — single LLM call with structured Pydantic output.
+
+    Evaluates the candidate's answer AND decides the next question
+    in one shot. Merges what would otherwise be two separate agents.
+
+    Also outputs jd_skill_targeted — which JD skill the current question
+    was designed to test. Used post-session to compute JD coverage report.
+    """
+    logger.debug("Evaluator-router node executing.")
+
+    llm = get_llm()
+    turns = state.get("turns", [])
+    latest_turn = turns[-1]
+    topics_covered = [t.get("question_text", "")[:50] for t in turns[:-1]]
+
+    prompt = build_evaluator_router_prompt(
+        domain=state["domain"],
+        difficulty=state["difficulty"],
+        question_text=latest_turn.get("question_text", ""),
+        answer_transcript=latest_turn.get("answer_transcript", ""),
+        topics_covered=topics_covered,
+        current_question_number=state["current_question_number"],
+        question_count=state["question_count"],
+        jd_skills=state.get("jd_skills", []),
+        conversation_summary=state.get("conversation_summary", ""),
     )
 
-    jd_context = ""
-    if jd_skills:
-        jd_context = f"""
-The candidate is preparing for a specific role. Target these skills from the job description:
-{", ".join(jd_skills)}
-Prioritize questions that test these skills when selecting new topics.
-Set jd_skill_targeted to the exact JD skill that the CURRENT question (the one the candidate just answered) was testing.
-If the current question does not map to any JD skill, set jd_skill_targeted to null.
-"""
-    else:
-        jd_context = "\nNo JD provided — set jd_skill_targeted to null.\n"
+    structured_llm = llm.with_structured_output(EvaluatorRouterOutput)
 
-    topics_str = ", ".join(topics_covered) if topics_covered else "none yet"
+    try:
+        result: EvaluatorRouterOutput = await structured_llm.ainvoke(prompt)
+    except Exception as e:
+        raise AgentException(f"Evaluator-router LLM call failed: {str(e)}")
 
-    history_section = ""
-    if conversation_summary.strip():
-        history_section = f"""
-CONVERSATION HISTORY (previous turns this session):
-{conversation_summary}
-Use this context to avoid repeating topics, build on prior answers, and adapt your follow-up questioning style.
-"""
+    logger.debug(
+        f"Evaluation complete — score: {result.correctness_score}, "
+        f"next: {result.next_question_type}, "
+        f"jd_skill_targeted: {result.jd_skill_targeted}"
+    )
 
-    # The final question needs no follow-up — don't pay for a next question that is never asked
-    if current_question_number >= question_count:
-        next_question_step = (
-            "7. This was the final question of the interview, so no next question is needed. "
-            "Set next_question_text to an empty string."
-        )
-    else:
-        next_question_step = "7. Generate the exact next question text."
+    updated_turn = {
+        **latest_turn,
+        "correctness_score": result.correctness_score,
+        "missing_concepts": result.missing_concepts,
+        "strengths": result.strengths,
+        "next_question_type": result.next_question_type,
+        "difficulty_adjustment": result.difficulty_adjustment,
+        "jd_skill_targeted": result.jd_skill_targeted,
+    }
 
-    return f"""You are a strict but fair technical interviewer conducting a {domain.replace("_", " ").title()} interview.
+    updated_turns = turns[:-1] + [updated_turn]
 
-DIFFICULTY LEVEL: {difficulty.upper()}
-{difficulty_instruction}
-{history_section}
-CURRENT QUESTION ({current_question_number}/{question_count}):
-{question_text}
+    next_question_number = state["current_question_number"] + 1
+    interview_complete = next_question_number > int(state["question_count"])
 
-CANDIDATE'S ANSWER:
-{answer_transcript}
-
-TOPICS COVERED SO FAR: {topics_str}
-{jd_context}
-YOUR TASK:
-1. Evaluate the candidate's answer objectively against the question asked.
-2. Assign a correctness score from 0.0 to 10.0.
-3. List specific concepts the candidate missed or got wrong.
-4. List what the candidate explained correctly or well.
-5. Identify which JD skill the CURRENT question was testing (jd_skill_targeted) — must match one of the provided JD skills exactly, or null if none applies.
-6. Decide the next question type:
-   - "follow_up" — candidate answered well, explore the same topic deeper
-   - "drill_down" — candidate was vague or partially correct, probe further
-   - "reframe" — candidate completely misunderstood, approach the concept differently
-   - "new_topic" — candidate answered well enough, move to a new topic
-{next_question_step}
-8. Decide difficulty adjustment for the next question.
-
-Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.
-"""
-
-
-def build_first_question_prompt(
-    domain: str,
-    difficulty: str,
-    seed_topics: list[str],
-    jd_skills: list[str],
-) -> str:
-    jd_context = ""
-    if jd_skills:
-        jd_context = f"Focus on this skill from the job description: {jd_skills[0]}\n"
-
-    # Pick one topic in code — don't let the LLM choose
-    topics_pool = seed_topics.copy()
-    random.shuffle(topics_pool)
-    chosen_topic = topics_pool[0]
-
-    return f"""You are a technical interviewer. Ask one interview question about: {chosen_topic}
-
-Domain: {domain.replace("_", " ").title()}
-Difficulty: {difficulty.upper()}
-{jd_context}
-Output format: Write the question text only. No JSON. No labels. No preamble. Just the question sentence ending with a question mark.
-
-Example of correct output:
-How does gradient descent optimize a neural network's weights during backpropagation?
-
-Now write one question about {chosen_topic}:"""
+    return {
+        "turns": updated_turns,
+        "current_question": result.next_question_text,
+        "current_question_number": next_question_number,
+        "interview_complete": interview_complete,
+    }

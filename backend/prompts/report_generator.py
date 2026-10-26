@@ -4,12 +4,34 @@ def build_report_prompt(
     candidate_name: str | None,
     turns: list[dict],
     avg_technical_score: float,
-    avg_speech_score: float,
+    avg_speech_score: float | None,
 ) -> str:
     name = candidate_name or "the candidate"
 
+    # avg_speech_score is None when fewer than half the answers were spoken — do not
+    # show the LLM a fake number to quote.
+    if avg_speech_score is None:
+        speech_line = "- Average Speech Score: not available (fewer than half the answers were spoken)"
+        communication_instruction = (
+            "Communication and delivery feedback. No speech score was computed because fewer than "
+            "half the answers were spoken, so do not mention or invent a communication score."
+        )
+    else:
+        speech_line = f"- Average Speech Score: {avg_speech_score:.1f}/10"
+        communication_instruction = (
+            f"Communication and delivery feedback. The computed communication score is "
+            f"{avg_speech_score:.1f}/10 — reference this exact number, do not invent a different score."
+        )
+
     turns_summary = ""
     for i, turn in enumerate(turns, 1):
+        if turn.get("skipped"):
+            turns_summary += f"""
+Q{i}: {turn.get("question_text", "")}
+Answer: [Skipped by the candidate. No answer given.]
+Score: not scored
+---"""
+            continue
         turns_summary += f"""
 Q{i}: {turn.get("question_text", "")}
 Answer: {turn.get("answer_transcript", "No answer recorded")}
@@ -25,7 +47,7 @@ INTERVIEW SUMMARY:
 - Domain: {domain.replace("_", " ").title()}
 - Difficulty: {difficulty.upper()}
 - Average Technical Score: {avg_technical_score:.1f}/10
-- Average Speech Score: {avg_speech_score:.1f}/10
+{speech_line}
 
 QUESTION-BY-QUESTION BREAKDOWN:
 {turns_summary}
@@ -38,7 +60,7 @@ Include:
 2. Top 3 weak topics with specific explanation of what was missing
 3. Top 2 strengths to build on
 4. Concrete study recommendations for each weak topic (specific resources, concepts to review)
-5. Communication and delivery feedback. The computed communication score is {avg_speech_score:.1f}/10 — reference this exact number, do not invent a different score.
+5. {communication_instruction}
 6. One specific goal for their next mock interview
 
 Tone: Direct, constructive, like a senior engineer giving real feedback.
