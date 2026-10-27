@@ -6,7 +6,7 @@ from sqlalchemy import (
     JSON,
     ForeignKey,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from core.logging import get_logger
 
@@ -29,13 +29,6 @@ class Session(Base):
     start_time: Mapped[str] = mapped_column(String, nullable=False)
     end_time: Mapped[str | None] = mapped_column(String, nullable=True)
     composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-
-    turns: Mapped[list["Turn"]] = relationship(
-        "Turn", back_populates="session", cascade="all, delete-orphan"
-    )
-    report: Mapped["Report | None"] = relationship(
-        "Report", back_populates="session", cascade="all, delete-orphan", uselist=False
-    )
 
 
 class Turn(Base):
@@ -60,8 +53,6 @@ class Turn(Base):
     timestamp: Mapped[str] = mapped_column(String, nullable=False)
     skipped: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
-    session: Mapped["Session"] = relationship("Session", back_populates="turns")
-
 
 class Report(Base):
     __tablename__ = "reports"
@@ -81,5 +72,3 @@ class Report(Base):
     improvement_plan_text: Mapped[str | None] = mapped_column(String, nullable=True)
     langsmith_trace_url: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
-
-    session: Mapped["Session"] = relationship("Session", back_populates="report")
