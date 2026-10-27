@@ -9,15 +9,6 @@ logger = get_logger(__name__)
 
 
 async def evaluator_router_node(state: SessionState) -> dict:
-    """
-    Evaluator-Router Node — single LLM call with structured Pydantic output.
-
-    Evaluates the candidate's answer AND decides the next question
-    in one shot. Merges what would otherwise be two separate agents.
-
-    Also outputs jd_skill_targeted — which JD skill the current question
-    was designed to test. Used post-session to compute JD coverage report.
-    """
     logger.debug("Evaluator-router node executing.")
 
     llm = get_llm()

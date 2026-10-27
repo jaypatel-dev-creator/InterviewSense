@@ -31,9 +31,6 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database ready.")
 
-    # Audio models — loaded once, reused across all sessions
-    # VAD is handled in the browser via useAudioRecorder.js (silence detection
-    # before sending audio chunks). No server-side VAD model needed.
     load_whisper()
     load_elevenlabs()
     logger.info("Audio models loaded.")

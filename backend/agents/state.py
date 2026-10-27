@@ -20,11 +20,6 @@ class Turn(TypedDict, total=False):
 
 
 def _replace_turns(existing: list, updated: list) -> list:
-    """
-    Replace, don't append. The evaluator_router returns the full updated
-    turns list — if LangGraph merges via x + y, turns double-accumulate
-    by Q2 and corrupt the evaluation context from that point onward.
-    """
     return updated if updated else existing
 
 
@@ -45,25 +40,9 @@ class SessionState(TypedDict):
 
     # Agent messages — LangGraph managed
     messages: Annotated[list[BaseMessage], add_messages]
-
-    # Session control
     interview_complete: bool
-
-    # Rolling conversation summary — plain text, appended after each answered turn.
-    # Injected into evaluator-router prompt so the LLM knows how the candidate
-    # answered previous questions when generating the next one.
-    # Transient — never persisted to DB, lives only during the WebSocket session.
     conversation_summary: str
-
     # Report output — populated by report_generator_node
     improvement_plan_text: str
-
-    # Communication score — computed once in finalize_session() from Whisper-only
-    # fluency metrics (filler rate + pause count) and passed into the graph so
-    # report_generator_node can read it without recomputing.
     communication_score: float | None
-
-    # Technical score — computed once in finalize_session() (average correctness over
-    # question_count, so skipped questions count as zero) and passed into the graph so
-    # the report prompt quotes the same number as the report card.
     technical_score: float | None

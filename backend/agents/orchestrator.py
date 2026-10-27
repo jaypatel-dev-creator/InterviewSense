@@ -15,18 +15,6 @@ _graph = None
 
 
 def compile_graph() -> None:
-    """
-    Initializes the LLM singleton and compiles the LangGraph StateGraph.
-    Called once at application startup in main.py lifespan.
-
-    Stores the compiled graph as a module-level singleton — the graph is
-    stateless (same nodes, edges, routing logic every invocation) so it
-    is safe to compile once and reuse across all WebSocket sessions.
-
-    Previously compile_graph() only initialized the LLM and build_graph()
-    was called per-connection. Consolidated here to follow the same singleton
-    pattern as _groq_client, _llm, _engine, and _elevenlabs_client.
-    """
     global _graph
 
     settings = get_settings()

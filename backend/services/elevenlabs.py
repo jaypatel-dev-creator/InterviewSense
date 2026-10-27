@@ -8,13 +8,6 @@ _elevenlabs_client: AsyncElevenLabs | None = None
 
 
 def load_elevenlabs() -> None:
-    """
-    Initializes ElevenLabs async client singleton.
-    Called once at application startup in main.py lifespan.
-
-    Follows the same singleton pattern as load_whisper() and compile_graph()
-    so all external API clients are initialized at startup, not per-request.
-    """
     global _elevenlabs_client
     settings = get_settings()
     _elevenlabs_client = AsyncElevenLabs(api_key=settings.elevenlabs_api_key)

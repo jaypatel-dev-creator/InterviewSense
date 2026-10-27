@@ -6,23 +6,6 @@ logger = get_logger(__name__)
 
 
 async def speech_analytics_node(state: SessionState) -> dict:
-    """
-    Speech Analytics Node — pure Python, no LLM call.
-
-    Acts as the graph's validation gate — runs first on every invocation
-    and fails fast if state is malformed before any LLM call is made.
-
-    Audio processing (Whisper transcription + librosa signal analysis) runs
-    pre-graph in the WebSocket handler via process_audio_chunk(). This is
-    intentional: transcript_update must reach the client immediately after
-    the candidate finishes speaking, and cannot wait for graph invocation
-    latency. By the time this node runs, speech_metrics and answer_transcript
-    are already populated in state by the WebSocket handler.
-
-    This node validates their presence, logs key paralinguistic signals,
-    and acts as the single guard so downstream LLM nodes (evaluator_router,
-    report_generator) can assume clean state without redundant checks.
-    """
     logger.debug("Speech analytics node executing.")
 
     turns = state.get("turns", [])

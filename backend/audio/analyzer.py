@@ -33,12 +33,6 @@ def extract_speech_features(
 
 
 def _compute_speaking_duration(words: list[dict], clip_duration: float) -> float:
-    """
-    Time from the first word's start to the last word's end. Excludes the
-    lead-in silence before speech and the trailing silence the recorder waits
-    for before sending. Falls back to the clip length when the spoken span is
-    too short to give a reliable rate (under 1 second).
-    """
     span = words[-1]["end"] - words[0]["start"]
     return span if span >= 1.0 else clip_duration
 
@@ -51,7 +45,6 @@ def _compute_wpm(words: list[dict], duration: float) -> float:
 
 
 def _compute_pause_count(words: list[dict], pause_threshold: float = 1.5) -> int:
-    """Counts pauses longer than pause_threshold seconds between words."""
     if len(words) < 2:
         return 0
     count = 0
