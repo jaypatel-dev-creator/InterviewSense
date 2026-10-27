@@ -125,10 +125,10 @@ The transcript pipeline sends each recorded answer to Groq Whisper as one audio 
 ElevenLabs blocks library voices on the free tier. The app requires a custom Voice Design voice. `ELEVENLABS_VOICE_ID` has no default and the app will fail to start without it. Monthly character quota (10,000 on free tier) limits the number of sessions per billing cycle.
 
 **4. Gemini free tier rate limits**
-The evaluator-router and report generator use Gemini 3.1 Flash Lite (15 RPM, 1500 RPD on free tier). Heavy testing across multiple sessions in a short window may exhaust the daily quota, causing the report generator to return empty output. Upgrading to a paid Gemini tier removes this constraint.
+The evaluator-router and report generator use Gemini 3.1 Flash Lite on the free tier, whose rate limits apply per project and are shown in Google AI Studio. Heavy testing across multiple sessions in a short window may exhaust the daily quota, causing the report generator to return empty output. Upgrading to a paid Gemini tier removes this constraint.
 
 **5. Per-turn latency — chained API calls**
-Each voice answer triggers two sequential operations: Groq Whisper transcription (~1–2s) + Gemini evaluator-router structured output call (~2–4s). Combined with ElevenLabs TTS synthesis for the next question (~1–2s), expect 4–8 seconds between submitting an answer and hearing the next question.
+Each voice answer triggers two sequential operations: Groq Whisper transcription (~1–2s) followed by a Gemini evaluator-router call. In a standalone test, single Gemini calls took roughly 4–10s, which is consistent with the ~6s time-to-first-token that independent benchmarks (Artificial Analysis) report for Gemini 3.1 Flash-Lite. The API also occasionally returns `503 UNAVAILABLE` (temporary overload), which the Gemini client retries automatically, so some answers take much longer (up to ~45s was observed). Add ElevenLabs TTS for the next question (~1–2s) and expect roughly 5–15 seconds between submitting an answer and hearing the next question. Sessions with a job description wait longer at the start (skill extraction runs before the first question), and the final report waits for the last evaluation and then report generation.
 
 **6. Browser-side VAD — energy threshold, not neural**
 Voice activity detection runs in the browser via an RMS energy threshold. This works reliably in quiet environments but can misfire in noisy conditions or cut off soft-spoken answers early.

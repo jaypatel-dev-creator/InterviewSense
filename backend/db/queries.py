@@ -57,15 +57,6 @@ async def get_session_by_id(
 
 
 async def delete_session(db: AsyncSession, session_id: str) -> bool:
-    """
-    Deletes a session and all associated turns and reports.
-    Returns True if a session was deleted, False if not found.
-
-    Note: cascade='all, delete-orphan' on the ORM relationship only fires for
-    ORM-level object deletion (load object → session.delete(obj)). Bulk SQL
-    DELETE via db.execute(delete(Model)) bypasses the ORM entirely — cascade
-    does not fire. Manual child deletion is required to avoid FK violations.
-    """
     await db.execute(delete(Turn).where(Turn.session_id == session_id))
     await db.execute(delete(Report).where(Report.session_id == session_id))
     result = await db.execute(
@@ -78,10 +69,6 @@ async def delete_session(db: AsyncSession, session_id: str) -> bool:
 
 
 async def delete_all_sessions(db: AsyncSession) -> int:
-    """
-    Deletes all sessions, turns, and reports.
-    Returns count of sessions deleted.
-    """
     # Get count before deletion
     count_result = await db.execute(select(func.count()).select_from(Session))
     count = count_result.scalar() or 0
@@ -106,7 +93,6 @@ async def insert_turn(db: AsyncSession, turn: dict) -> None:
         answer_transcript=turn.get("answer_transcript"),
         correctness_score=turn.get("correctness_score"),
         speech_metrics=turn.get("speech_metrics", {}),
-        # JSON column — SQLAlchemy serializes dict automatically. No json.dumps needed.
         next_question_type=turn.get("next_question_type"),
         jd_skill_targeted=turn.get("jd_skill_targeted"),
         missing_concepts=turn.get("missing_concepts", []),
@@ -134,10 +120,6 @@ async def get_turns_by_session(
 # --- Reports ---
 
 async def insert_report(db: AsyncSession, report: dict) -> None:
-    # INSERT OR IGNORE equivalent — skip if report for this session already exists.
-    # Keeps finalize_session idempotent: if it runs again for the same session (a retry
-    # after a failed run, or a reconnect with the same session_id), the existing report
-    # is kept instead of violating the unique constraint on session_id.
     existing = await db.execute(
         select(Report).where(Report.session_id == report["session_id"])
     )
@@ -153,7 +135,6 @@ async def insert_report(db: AsyncSession, report: dict) -> None:
         pacing_score=report.get("pacing_score"),
         composite_score=report.get("composite_score"),
         weak_topics=report.get("weak_topics", []),
-        # JSON column — SQLAlchemy serializes list automatically. No json.dumps needed.
         jd_coverage=report.get("jd_coverage"),
         improvement_plan_text=report.get("improvement_plan_text"),
         langsmith_trace_url=report.get("langsmith_trace_url"),
@@ -175,10 +156,6 @@ async def get_report_by_session(
     return _report_to_dict(report)
 
 
-# --- ORM → dict helpers ---
-# Callers (routes.py, websocket.py) work with plain dicts — not ORM objects.
-# These helpers keep the return type identical to the old aiosqlite queries
-# so no caller needs to change.
 
 def _session_to_dict(s: Session) -> dict:
     return {
@@ -202,7 +179,6 @@ def _turn_to_dict(t: Turn) -> dict:
         "answer_transcript": t.answer_transcript,
         "correctness_score": t.correctness_score,
         "speech_metrics": t.speech_metrics or {},
-        # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
         "next_question_type": t.next_question_type,
         "jd_skill_targeted": t.jd_skill_targeted,
         "missing_concepts": t.missing_concepts or [],
@@ -222,7 +198,6 @@ def _report_to_dict(r: Report) -> dict:
         "pacing_score": r.pacing_score,
         "composite_score": r.composite_score,
         "weak_topics": r.weak_topics or [],
-        # JSON column — SQLAlchemy deserializes automatically. No json.loads needed.
         "jd_coverage": r.jd_coverage,
         "improvement_plan_text": r.improvement_plan_text,
         "langsmith_trace_url": r.langsmith_trace_url,

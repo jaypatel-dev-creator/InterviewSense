@@ -6,10 +6,7 @@ class SpeechMetrics(BaseModel):
     pause_count: int = 0
     filler_word_count: int = 0
     answer_duration_seconds: float = 0.0
-    # energy_level and pitch_variation removed — librosa dependency dropped.
-    # Both were basic signal processing metrics (RMS and F0 std dev),
-    # not actionable for interview feedback. All metrics are now derived
-    # purely from Whisper word-level timestamps.
+   
 
 
 class TurnResponse(BaseModel):
