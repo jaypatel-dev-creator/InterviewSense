@@ -28,8 +28,6 @@ async def lifespan(app: FastAPI):
     setup_logging(settings.app_env)
     logger.info("Starting InterviewSense...")
 
-    # Database — creates engine, session factory, and all tables via
-    # Base.metadata.create_all. Safe to call on every startup.
     await init_db()
     logger.info("Database ready.")
 

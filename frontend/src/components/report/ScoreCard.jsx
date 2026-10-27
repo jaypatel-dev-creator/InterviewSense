@@ -56,9 +56,7 @@ export default function ScoreCard({ report }) {
 
   const compositeLabel = (() => {
     if (!commNA && !pacingNA) return 'Technical 60% · Communication 25% · Pacing 15%'
-    if (!commNA) return 'Technical 75% · Communication 25%'
-    if (!pacingNA) return 'Technical 85% · Pacing 15%'
-    return 'Technical only (no voice answers)'
+    return 'Technical only (fewer than half the answers spoken)'
   })()
 
   const grade = composite >= 7 ? 'A' : composite >= 5 ? 'B' : 'C'

@@ -10,9 +10,6 @@ logger = get_logger(__name__)
 
 GROQ_MODEL = "whisper-large-v3-turbo"
 
-# Whisper cleans up "um" and "uh" unless the prompt shows it that disfluencies are wanted.
-# Without this hint the filler word count is undercounted. Remove it if prompt text
-# ever appears in transcripts of silent or near-silent audio.
 WHISPER_PROMPT = "Umm, let me think like, hmm... Okay, so, uh, here's what I'm, you know, thinking."
 
 # Module-level singleton — initialized once at startup
@@ -20,11 +17,6 @@ _groq_client: AsyncGroq | None = None
 
 
 def load_whisper() -> None:
-    """
-    Initializes Groq client singleton.
-    Called load_whisper() to keep interface identical —
-    swap to Deepgram here without touching any other file.
-    """
     global _groq_client
     settings = get_settings()
     _groq_client = AsyncGroq(api_key=settings.groq_api_key)
@@ -38,11 +30,6 @@ def get_groq_client() -> AsyncGroq:
 
 
 def _numpy_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
-    """
-    Converts float32 numpy array to PCM_16 WAV bytes for Groq API.
-    Groq Whisper expects standard int16 PCM WAV — float subtype causes
-    silent empty transcripts. Clip → scale → cast before writing.
-    """
     buffer = io.BytesIO()
     audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
     sf.write(buffer, audio_int16, sample_rate, format="WAV", subtype="PCM_16")
@@ -51,25 +38,6 @@ def _numpy_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
 
 
 async def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
-    """
-    Transcribes a mono float32 numpy audio array via Groq Whisper API.
-
-    Architecture note: implemented as chunk-based transcription.
-    VAD detects silence upstream, full chunk sent here, transcript
-    returns in ~1-2 seconds. Swap this file only to enable true
-    word-by-word streaming via Deepgram Nova-3.
-
-    Raises:
-        TranscriptionException: if the Groq API call fails. Caller
-        (websocket.py) catches this and sends a typed error to the frontend.
-
-    Returns:
-        {
-            "text": str,
-            "words": list[dict],   # [{word, start, end, probability}]
-            "language": str,
-        }
-    """
     client = get_groq_client()
 
     wav_bytes = _numpy_to_wav_bytes(audio_chunk, sample_rate)

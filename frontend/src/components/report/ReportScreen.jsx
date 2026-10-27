@@ -37,15 +37,15 @@ function ScoringModal({ onClose }) {
         },
         {
           label: 'Filler word rate (60% weight)',
-          text: 'Words like "um", "uh", "like", "basically", "you know" detected per answer. Below 2% is fluent. 5% is noticeable to interviewers. 10%+ is damaging. Research-backed threshold from Quantified Communications.',
+          text: 'Hesitation sounds ("um", "uh", "er", "hmm") and the phrases "you know" and "I mean", counted per answer. The score falls from 10 at 0% fillers to 5 at 5% and 0 at 10%. Below 2% is fluent, 5% is noticeable to interviewers, and 10%+ is damaging.',
         },
         {
           label: 'Long pause frequency (40% weight)',
           text: 'Silences longer than 1.5 seconds between words. 0–1 pauses per answer is fine — it can signal thoughtfulness. 4+ pauses suggests the topic caused you to blank, which is a strong signal to study that area. 7+ pauses scores 0.',
         },
         {
-          label: 'Text answer penalty',
-          text: 'Text answers contribute 0 to communication score. If fewer than half your answers were voice, communication shows N/A and its weight redistributes to technical.',
+          label: 'Text answers',
+          text: 'Typed answers are left out of this average, which uses your spoken answers only. If fewer than half your answers were spoken, Communication shows N/A and the overall score uses Technical only.',
         },
       ],
     },
@@ -62,8 +62,8 @@ function ScoringModal({ onClose }) {
           text: '120–160 wpm = 10.0 (ideal). Below 120 degrades linearly — under 80 wpm floors at 2.0. Above 160 degrades linearly — above 220 wpm floors at 2.0.',
         },
         {
-          label: 'Text answer penalty',
-          text: 'Same as communication — text answers contribute 0. Fewer than half voice answers → Pacing shows N/A.',
+          label: 'Text answers',
+          text: 'Same as Communication: typed answers are left out of the average. If fewer than half your answers were spoken, Pacing shows N/A.',
         },
       ],
     },
@@ -72,19 +72,11 @@ function ScoringModal({ onClose }) {
       color: '#6b6860',
       items: [
         {
-          label: 'Full voice session',
+          label: 'Voice session (half or more answers spoken)',
           text: 'Technical 60% + Communication 25% + Pacing 15%.',
         },
         {
-          label: 'Partial voice (communication only)',
-          text: 'Technical 75% + Communication 25%.',
-        },
-        {
-          label: 'Partial voice (pacing only)',
-          text: 'Technical 85% + Pacing 15%.',
-        },
-        {
-          label: 'Text only / no voice',
+          label: 'Fewer than half the answers spoken',
           text: 'Technical 100%. Communication and Pacing show N/A.',
         },
         {
