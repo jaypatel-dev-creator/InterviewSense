@@ -152,6 +152,7 @@ Create the session first with `POST /api/sessions`. The WebSocket loads the sess
 | `{"type": "question", "question": "...", "question_number": N, "question_count": N}` | New question |
 | `{"type": "transcript_update", "text": "...", "speech_metrics": {...}}` | Live transcript + metrics |
 | `{"type": "report_ready", "report": {...}, "turns": [...]}` | Session complete |
+| `{"type": "notice", "message": "..."}` | Informational message, e.g. the pasted JD produced no skills, so the interview continues without JD targeting |
 | `{"type": "error", "error_code": "...", "message": "..."}` | Typed error. `INVALID_MESSAGE`, `TRANSCRIPTION_FAILED` and `AGENT_FAILED` leave the session open so the client can retry; `INTERNAL_ERROR` ends it |
 
 ---
@@ -190,7 +191,7 @@ N/A threshold: fewer than `ceil(question_count / 2)` voice answers → Communica
 
 When `jd_text` is provided at session start:
 
-1. JD skills are extracted via a Gemini call and stored in `SessionState.jd_skills`
+1. JD skills are extracted via a Gemini call, cleaned (strings only, duplicates removed, at most 12, each under 80 characters) and stored in `SessionState.jd_skills`
 2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested
 3. Post-session, `finalize_session()` computes coverage:
 
@@ -202,7 +203,7 @@ jd_coverage = {
 }
 ```
 
-Sessions without a JD set `jd_coverage` to `null` — the frontend renders nothing for that section.
+Sessions without a JD set `jd_coverage` to `null` — the frontend renders nothing for that section. If a JD is pasted but no skills can be extracted (the text is not a job description, or the Gemini call fails), the session continues without JD targeting and the client receives a `notice` message.
 
 ---
 

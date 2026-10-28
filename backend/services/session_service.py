@@ -16,6 +16,10 @@ from core.exceptions import AgentException
 
 logger = get_logger(__name__)
 
+# Limits for JD skill extraction. The prompt asks for these; the code enforces them.
+MAX_JD_SKILLS = 12
+MAX_SKILL_CHARS = 80
+
 
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -34,6 +38,28 @@ def _extract_text(response) -> str:
     return str(content).strip()
 
 
+def _clean_skills(skills: list) -> list[str]:
+    """
+    Keeps only usable skills from the model's output: non-empty strings of reasonable
+    length, without duplicates (ignoring case), at most MAX_JD_SKILLS. Anything else
+    (numbers, objects, sentence-length text) is dropped.
+    """
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for skill in skills:
+        if not isinstance(skill, str):
+            continue
+        skill = skill.strip()
+        key = skill.lower()
+        if not skill or len(skill) > MAX_SKILL_CHARS or key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(skill)
+        if len(cleaned) == MAX_JD_SKILLS:
+            break
+    return cleaned
+
+
 async def extract_jd_skills(jd_text: str) -> list[str]:
     if not jd_text or not jd_text.strip():
         return []
@@ -47,7 +73,7 @@ async def extract_jd_skills(jd_text: str) -> list[str]:
             if content.startswith("json"):
                 content = content[4:]
         skills = json.loads(content.strip())
-        return skills if isinstance(skills, list) else []
+        return _clean_skills(skills) if isinstance(skills, list) else []
     except Exception as e:
         logger.warning(f"JD skill extraction failed: {e}", exc_info=True)
         return []

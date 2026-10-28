@@ -62,6 +62,17 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
         jd_skills = await extract_jd_skills(jd_text or "")
         logger.info(f"JD skills extracted: {jd_skills}")
 
+        # A JD was pasted but no usable skills came out of it (not a job description,
+        # or the extraction call failed). Say so instead of ignoring it silently.
+        if (jd_text or "").strip() and not jd_skills:
+            await websocket.send_json({
+                "type": "notice",
+                "message": (
+                    "We couldn't extract any technical skills from the job description you pasted, "
+                    "so this interview uses general questions for your domain."
+                ),
+            })
+
         first_question = await generate_first_question(domain, difficulty, jd_skills)
 
         state: SessionState = {

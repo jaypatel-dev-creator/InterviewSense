@@ -5,6 +5,7 @@ Extract the specific technical skills, tools, frameworks, and concepts required 
 Focus only on technical requirements — ignore soft skills, benefits, and company culture.
 
 CRITICAL RULES:
+- If the text below is not a job description, or contains no technical requirements, respond with an empty array: []
 - Maximum 12 skills total. If the JD has fewer requirements, extract fewer.
 - When a requirement lists multiple options (e.g. "Pinecone, Weaviate, or Chroma"), extract ONE representative skill, not all of them. Pick the most common or most relevant one.
 - When a requirement mentions a category with examples (e.g. "vector databases (Pinecone, Weaviate)"), extract the category ("vector databases"), not the individual tools.

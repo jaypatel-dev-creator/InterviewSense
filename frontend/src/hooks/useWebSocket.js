@@ -56,6 +56,12 @@ export function useWebSocket() {
             _wsInstance = null
             break
 
+          case 'notice':
+            // Informational only (e.g. the pasted JD yielded no skills). Show it in the
+            // existing dismissible banner without touching the processing state.
+            setError(data.message)
+            break
+
           case 'error':
             setError(data.message)
             setProcessing(false)
