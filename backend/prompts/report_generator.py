@@ -32,7 +32,9 @@ def build_report_prompt(
             f"\nIMPORTANT: The candidate answered only {questions_answered} of {question_count} questions. "
             "Skipped and unreached questions count as 0 in the technical score, so that average is lower "
             "than the quality of the answers alone. Say this plainly in the summary, and judge the answered "
-            "questions on their own merits instead of calling the candidate's knowledge weak because of the average alone.\n"
+            "questions on their own merits instead of calling the candidate's knowledge weak because of the average alone. "
+            "Do not list the unanswered questions as a weak topic, do not guess why the candidate stopped, "
+            "and take weak topics only from the answered questions.\n"
         )
     else:
         coverage_note = ""
