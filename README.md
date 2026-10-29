@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo-512.png" alt="InterviewSense logo" width="96" />
+</p>
+
 # InterviewSense
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
