@@ -5,6 +5,8 @@ def build_report_prompt(
     turns: list[dict],
     avg_technical_score: float,
     avg_speech_score: float | None,
+    questions_answered: int,
+    question_count: int,
 ) -> str:
     name = candidate_name or "the candidate"
 
@@ -22,6 +24,18 @@ def build_report_prompt(
             f"Communication and delivery feedback. The computed communication score is "
             f"{avg_speech_score:.1f}/10 — reference this exact number, do not invent a different score."
         )
+
+    # Skipped and unreached questions count as 0 in the technical score. Without this note the
+    # model reads a low average as weak knowledge instead of an unfinished interview.
+    if questions_answered < question_count:
+        coverage_note = (
+            f"\nIMPORTANT: The candidate answered only {questions_answered} of {question_count} questions. "
+            "Skipped and unreached questions count as 0 in the technical score, so that average is lower "
+            "than the quality of the answers alone. Say this plainly in the summary, and judge the answered "
+            "questions on their own merits instead of calling the candidate's knowledge weak because of the average alone.\n"
+        )
+    else:
+        coverage_note = ""
 
     turns_summary = ""
     for i, turn in enumerate(turns, 1):
@@ -47,8 +61,9 @@ INTERVIEW SUMMARY:
 - Domain: {domain.replace("_", " ").title()}
 - Difficulty: {difficulty.upper()}
 - Average Technical Score: {avg_technical_score:.1f}/10
+- Questions answered: {questions_answered} of {question_count}
 {speech_line}
-
+{coverage_note}
 QUESTION-BY-QUESTION BREAKDOWN:
 {turns_summary}
 

@@ -8,12 +8,28 @@ logger = get_logger(__name__)
 
 
 async def report_generator_node(state: SessionState) -> dict:
+    """
+    Report Generator Node — single LLM call at session end.
+    Reads full session state, generates written improvement plan.
+
+    technical_score and communication_score are read directly from state —
+    computed once in finalize_session() and passed into the graph. No
+    recomputation here, single source of truth.
+    """
     logger.debug("Report generator node executing.")
 
     llm = get_llm()
     turns = state.get("turns", [])
+
+    # Read technical_score and communication_score from state — both are set by
+    # finalize_session() before graph.ainvoke(), so the prompt quotes the same
+    # numbers as the report card. communication_score is None when fewer than
+    # half the turns had voice answers.
     avg_technical = state.get("technical_score") or 0.0
     avg_speech = state.get("communication_score")
+
+    # Skipped turns are in `turns` but were not answered
+    questions_answered = sum(1 for t in turns if not t.get("skipped"))
 
     prompt = build_report_prompt(
         domain=state["domain"],
@@ -22,6 +38,8 @@ async def report_generator_node(state: SessionState) -> dict:
         turns=turns,
         avg_technical_score=avg_technical,
         avg_speech_score=avg_speech,
+        questions_answered=questions_answered,
+        question_count=int(state["question_count"]),
     )
 
     try:

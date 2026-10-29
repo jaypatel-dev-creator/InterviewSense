@@ -51,6 +51,8 @@ export function useWebSocket() {
               turns: data.turns || [],
               interviewComplete: true,
             })
+            // A notice or error banner belongs to the interview, not the report
+            setError(null)
             setScreen('report')
             _wsInstance?.disconnect()
             _wsInstance = null
