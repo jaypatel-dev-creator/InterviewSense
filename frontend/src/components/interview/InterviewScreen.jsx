@@ -15,9 +15,10 @@ export default function InterviewScreen() {
     liveTranscript,
     speechMetrics,
     lastEvaluation,
+    interviewComplete,
   } = useSessionStore()
 
-  const { isRecording, isAISpeaking, isProcessing } = useUIStore()
+  const { isRecording, isAISpeaking, isProcessing, setScreen } = useUIStore()
   const { endSession, sendAudio, sendText, sendControl } = useSession()
 
   const [volume, setVolume] = useState(0)
@@ -90,7 +91,10 @@ export default function InterviewScreen() {
             <span className="text-xs font-mono" style={{ color: '#a8a49e' }}>
               Question {currentQuestionNumber} of {questionCount}
             </span>
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3"
+              style={{ visibility: interviewComplete ? 'hidden' : 'visible' }}
+            >
               <button
                 onClick={handleRepeat}
                 className="text-xs px-3 py-1.5"
@@ -145,10 +149,26 @@ export default function InterviewScreen() {
           </div>
 
           {/* Waveform */}
-          <Waveform volume={volume} isRecording={isRecording} />
+          {!interviewComplete && <Waveform volume={volume} isRecording={isRecording} />}
 
           {/* Record Button */}
-          {!textFallback ? (
+          {interviewComplete ? (
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-sm font-medium" style={{ color: '#0f0e0c' }}>
+                Interview complete
+              </span>
+              <span className="text-xs" style={{ color: '#a8a49e' }}>
+                The analysis of your last answer is shown on the right.
+              </span>
+              <button
+                onClick={() => setScreen('report')}
+                className="px-6 py-2.5 text-sm font-medium"
+                style={{ backgroundColor: '#c84b1a', color: '#ffffff' }}
+              >
+                View Final Report
+              </button>
+            </div>
+          ) : !textFallback ? (
             <div className="flex flex-col items-center gap-4">
               <button
                 onClick={toggleRecording}
@@ -240,7 +260,10 @@ export default function InterviewScreen() {
           <LiveTranscript transcript={liveTranscript} />
 
           {/* End Interview */}
-          <div className="flex justify-center pt-4">
+          <div
+            className="flex justify-center pt-4"
+            style={{ display: interviewComplete ? 'none' : undefined }}
+          >
             <button
               onClick={endSession}
               className="text-xs px-4 py-2"

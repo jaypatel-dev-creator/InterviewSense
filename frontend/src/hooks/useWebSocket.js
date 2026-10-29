@@ -43,20 +43,46 @@ export function useWebSocket() {
             updateLiveTranscript(data.text, data.speech_metrics)
             break
 
-          case 'report_ready':
-            // Commit report, turns, and screen atomically — prevents ReportScreen
+          case 'report_ready': {
+            const turns = data.turns || []
+            const lastTurn = turns[turns.length - 1]
+            const { questionCount } = useSessionStore.getState()
+
+            // The interview ended because the last question was answered: stay on the
+            // interview screen so that answer's analysis can be read before opening the
+            // report. Ending early or skipping the last question has nothing new to show,
+            // so those go straight to the report.
+            const holdForLastAnalysis =
+              questionCount > 0 &&
+              turns.length === questionCount &&
+              Boolean(lastTurn) &&
+              !lastTurn.skipped
+
+            // Commit report, turns and the last evaluation atomically — prevents the screens
             // rendering with stale data between individual setX calls.
             useSessionStore.setState({
               report: data.report,
-              turns: data.turns || [],
+              turns,
               interviewComplete: true,
+              ...(holdForLastAnalysis && {
+                lastEvaluation: {
+                  correctness_score: lastTurn.correctness_score,
+                  strengths: lastTurn.strengths || [],
+                  missing_concepts: lastTurn.missing_concepts || [],
+                },
+              }),
             })
             // A notice or error banner belongs to the interview, not the report
             setError(null)
-            setScreen('report')
+            if (holdForLastAnalysis) {
+              setProcessing(false)
+            } else {
+              setScreen('report')
+            }
             _wsInstance?.disconnect()
             _wsInstance = null
             break
+          }
 
           case 'notice':
             // Informational only (e.g. the pasted JD yielded no skills). Show it in the

@@ -1,7 +1,5 @@
 from typing import Annotated
 from typing_extensions import TypedDict
-from langgraph.graph.message import add_messages
-from langchain_core.messages import BaseMessage
 
 
 class Turn(TypedDict, total=False):
@@ -38,8 +36,6 @@ class SessionState(TypedDict):
     current_question_number: int
     turns: Annotated[list[Turn], _replace_turns]
 
-    # Agent messages — LangGraph managed
-    messages: Annotated[list[BaseMessage], add_messages]
     interview_complete: bool
     conversation_summary: str
     # Report output — populated by report_generator_node

@@ -86,7 +86,6 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
             "current_question": first_question,
             "current_question_number": 1,
             "turns": [],
-            "messages": [],
             "interview_complete": False,
             "improvement_plan_text": "",
             "conversation_summary": "",
@@ -186,7 +185,7 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
                         state["current_question_number"] += 1
                         if state["current_question_number"] > question_count:
                             await finalize_session(websocket, state, session_id, graph)
-                            return  # changed from break → return to fully exit handler
+                            return  
 
                         next_question = await generate_first_question(
                             domain=state["domain"],

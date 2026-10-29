@@ -25,7 +25,7 @@ class EvaluatorRouterOutput(BaseModel):
         )
     )
 
-    # Routing
+    
     next_question_type: Literal[
         "new_topic",
         "follow_up",

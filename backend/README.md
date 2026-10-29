@@ -90,9 +90,11 @@ filler counts. No LLM call — pure Python.
 Single Gemini call with structured Pydantic output (`EvaluatorRouterOutput`). In one shot:
 - Scores the candidate's answer (0–10)
 - Identifies strengths and missing concepts
-- Identifies which JD skill the current question was testing (`jd_skill_targeted`)
+- Identifies which JD skill the current question was testing (`jd_skill_targeted`), matched case-insensitively against the extracted skills and stored as `null` if it matches none
 - Decides the next question type (`drill_down`, `follow_up`, `new_topic`, `reframe`)
 - Generates the exact next question text, informed by a rolling conversation summary (left empty on the final question, where no next question is needed)
+
+**Difficulty adaptation.** Difficulty is adjusted in code, not by the model. After each scored answer, a score of 8 or above moves the session up one level (easy → medium → hard), a score of 4 or below moves it down one level, and anything in between keeps it, clamped at both ends. The new level is saved in `SessionState.difficulty` and the applied adjustment is stored on the turn; the model's own `difficulty_adjustment` output is ignored. The change applies from the question after next, because the next question is written in the same call. The history card and report header still show the difficulty the session started with.
 
 The conversation summary is a plain-text log of prior Q&A appended after each turn — no extra LLM call. It gives the evaluator context about how the candidate answered previous questions when generating the next one.
 
@@ -192,7 +194,7 @@ N/A threshold: fewer than `ceil(question_count / 2)` voice answers → Communica
 When `jd_text` is provided at session start:
 
 1. JD skills are extracted via a Gemini call, cleaned (strings only, duplicates removed, at most 12, each under 80 characters) and stored in `SessionState.jd_skills`
-2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested
+2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested. It is matched case-insensitively against the extracted skills, and a value that matches none is stored as `null`, so coverage only counts real skills
 3. Post-session, `finalize_session()` computes coverage:
 
 ```python
@@ -216,6 +218,8 @@ SQLAlchemy async ORM with `Base.metadata.create_all` at startup. Tables are crea
 | `sessions` | `session_id`, `domain`, `difficulty`, `question_count`, `candidate_name`, `jd_text`, `start_time`, `end_time`, `composite_score` |
 | `turns` | `turn_id`, `session_id`, `question_text`, `answer_transcript`, `correctness_score`, `speech_metrics` (JSON), `next_question_type`, `jd_skill_targeted`, `missing_concepts` (JSON), `strengths` (JSON), `difficulty_adjustment`, `timestamp`, `skipped` |
 | `reports` | `report_id`, `session_id`, `technical_score`, `communication_score`, `pacing_score`, `composite_score`, `weak_topics` (JSON), `jd_coverage` (JSON), `improvement_plan_text`, `langsmith_trace_url`, `created_at` |
+
+`reports.langsmith_trace_url` is a placeholder: it is always saved as an empty string and nothing populates it yet.
 
 ---
 
