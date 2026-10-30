@@ -135,7 +135,7 @@ All speech metrics are derived entirely from Whisper word-level timestamps. No s
 
 **Connection:** `ws://localhost:8000/ws/interview/{session_id}`
 
-Create the session first with `POST /api/sessions`. The WebSocket loads the session's domain, difficulty, question count, JD and candidate name from the database, so none of them travel in the URL. An unknown `session_id` is rejected with close code `1008`; the other fields are validated when the session is created.
+Create the session first with `POST /api/sessions`. The WebSocket loads the session's domain, difficulty, question count, JD and candidate name from the database, so none of them travel in the URL. An unknown `session_id` is rejected before the WebSocket handshake completes, so the client sees an HTTP 403 rather than a close code; the other fields are validated when the session is created.
 
 ### Client → Server
 
@@ -194,7 +194,7 @@ N/A threshold: fewer than `ceil(question_count / 2)` voice answers → Communica
 When `jd_text` is provided at session start:
 
 1. JD skills are extracted via a Gemini call, cleaned (strings only, duplicates removed, at most 12, each under 80 characters) and stored in `SessionState.jd_skills`
-2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested. It is matched case-insensitively against the extracted skills, and a value that matches none is stored as `null`, so coverage only counts real skills
+2. The evaluator-router outputs `jd_skill_targeted` per turn — which JD skill the question tested. It is matched case-insensitively against the extracted skills, and a value that matches none is stored as `null`, so coverage only counts real skills. "Tested" means an answered question was matched to that skill; it says nothing about how well the answer went, and skipped questions are not counted
 3. Post-session, `finalize_session()` computes coverage:
 
 ```python

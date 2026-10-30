@@ -27,7 +27,7 @@ InterviewSense conducts a complete mock technical interview using your microphon
 
 The evaluator adapts each follow-up question based on a rolling conversation summary — it knows how you answered Q1 when generating Q3, not just what topic was covered.
 
-If a job description is provided, the system extracts role-specific skills, maps each interview question to a targeted JD skill, and reports post-session coverage: which skills were tested and which were missed.
+If a job description is provided, the system extracts role-specific skills, maps each interview question to a targeted JD skill, and reports post-session coverage: which skills were targeted by an answered question and which were not (coverage measures what was asked, not how well it was answered).
 
 At session end, a report generator produces a structured improvement plan: weak topics, strengths, study recommendations, JD coverage breakdown, and a concrete goal for the next mock interview.
 
@@ -97,7 +97,7 @@ Audio is captured as `Float32Array` frames via the Web Audio API and buffered in
 | Backend Engineering | REST, auth, databases, concurrency, deployment, rate limiting |
 | DSA | Arrays, trees, graphs, dynamic programming, sliding window, monotonic stack |
 
-Each domain has 24–30 seed topics. Without a JD, questions are drawn from the full seed pool. With a JD, a separate extraction call pulls out role-specific skills, the evaluator-router biases questioning toward them, and the skills tested are tracked post-session.
+Each domain has 24–30 seed topics. Without a JD, questions are drawn from the full seed pool. With a JD, a separate extraction call pulls out role-specific skills, the evaluator-router biases questioning toward them, and the skills targeted by answered questions are tracked post-session.
 
 ---
 

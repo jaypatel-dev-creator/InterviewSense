@@ -40,8 +40,10 @@ SetupForm (Step 3 — Job Description, optional)
 InterviewScreen  ←──── WebSocket connected, questions flowing
     │
     ▼
-ReportScreen  ←──── report_ready received, socket closed
+ReportScreen  ←──── report_ready received, socket closed (or View Final Report clicked)
 ```
+
+When the interview ends because the last question was answered, the app stays on `InterviewScreen`: the side panel shows that answer's speech metrics, score, strengths and missed points, and a **View Final Report** button replaces the answer controls. Ending early (End Interview) or skipping the last question goes straight to `ReportScreen`.
 
 ---
 
@@ -62,7 +64,7 @@ screen ('setup' | 'interview' | 'report'),
 isAISpeaking, isProcessing, error
 ```
 
-`report_ready` sets `report`, `turns`, and `interviewComplete` atomically via `useSessionStore.setState()` to prevent stale renders between individual store updates.
+`report_ready` sets `report`, `turns`, and `interviewComplete` atomically via `useSessionStore.setState()` to prevent stale renders between individual store updates. When the last question was answered, it also sets `lastEvaluation` from the final turn so the side panel can show that answer's analysis before the report opens.
 
 ---
 
@@ -76,8 +78,9 @@ isAISpeaking, isProcessing, error
 |---|---|
 | `question` | `setQuestion()` → `speakText()` via ElevenLabs TTS |
 | `transcript_update` | `updateLiveTranscript()` — live display |
-| `report_ready` | Atomic store update → navigate to report screen |
-| `error` | `setError()` — typed error codes: `TRANSCRIPTION_FAILED`, `AGENT_FAILED`, `INTERNAL_ERROR` |
+| `notice` | `setError()` — informational message (for example, the pasted JD produced no skills) shown in the dismissible banner; the processing state is untouched |
+| `report_ready` | Atomic store update and banner cleared. Last question answered → stay on the interview screen; **View Final Report** opens the report. Ended early or last question skipped → navigate to the report screen |
+| `error` | `setError()` — typed error codes: `INVALID_MESSAGE`, `TRANSCRIPTION_FAILED`, `AGENT_FAILED`, `INTERNAL_ERROR` |
 
 ---
 
@@ -118,7 +121,7 @@ After flush, mic is torn down (`_teardown()`) and a `teardownRef` flag prevents 
 src/
 ├── components/
 │   ├── interview/
-│   │   ├── InterviewScreen.jsx   # Main interview layout
+│   │   ├── InterviewScreen.jsx   # Main interview layout (and the View Final Report step after the last answer)
 │   │   ├── AnalyticsPanel.jsx    # Live speech metrics sidebar
 │   │   ├── LiveTranscript.jsx    # Transcript display with blinking cursor
 │   │   ├── Waveform.jsx          # Real-time audio waveform visualizer
