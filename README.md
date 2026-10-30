@@ -171,9 +171,8 @@ A skipped question is replaced by a new one generated from the seed topics with 
 **15. Answer processing blocks the WebSocket loop**
 Transcription and evaluation (roughly 4–8 seconds of Groq and Gemini calls) are awaited inside the WebSocket receive loop. Control messages such as `end_interview`, `skip_question` and `repeat_question` sent during that time are handled only after processing finishes.
 
-
 **16. The LangGraph workflow is thin**
-LangGraph structures the per-turn flow (typed state, a validation gate, the evaluator-router and the report generator), but the workflow has no cycles, checkpointer, tools or streaming, and persistence and state merging happen outside the graph in `websocket.py` and `session_service.py`. A plain async function would behave the same way. LangGraph would earn its place with loops, human-in-the-loop steps or durable session resume.
+LangGraph structures the per-turn flow (typed state, a validation gate, the evaluator-router and the report generator), but the workflow has no cycles, checkpointer, tools or streaming, and persistence and state merging happen outside the graph in `websocket.py` and `session_service.py`. A plain async function would behave the same way. LangGraph would earn its place with loops, human-in-the-loop steps or durable session resume. LangGraph was still used because it gives the per-turn flow explicit, typed nodes and a conditional edge (evaluate the answer, or generate the report) in one place, and it is the structure that loops or a checkpointer for session resume would build on. The cost is an extra dependency and some indirection for what is currently a short, mostly linear flow.
 
 **17. No automated tests**
 Behaviour has been verified manually. There is no automated test suite in the repo yet, although the scoring functions (pacing, communication, difficulty adjustment, JD skill matching) are pure and straightforward to unit test.
