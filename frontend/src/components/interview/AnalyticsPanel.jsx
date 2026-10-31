@@ -204,13 +204,13 @@ export default function AnalyticsPanel({ metrics, evaluation }) {
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: '#6b6860' }}>Filler words</span>
           <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
-            {metrics?.filler_word_count ?? '—'}
+            {isTextAnswer ? '—' : (metrics?.filler_word_count ?? '—')}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: '#6b6860' }}>Pauses</span>
           <span className="text-xs font-mono" style={{ color: '#0f0e0c' }}>
-            {metrics?.pause_count ?? '—'}
+            {isTextAnswer ? '—' : (metrics?.pause_count ?? '—')}
           </span>
         </div>
         <div className="flex items-center justify-between">

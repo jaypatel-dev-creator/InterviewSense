@@ -45,7 +45,7 @@ function ScoringModal({ onClose }) {
         },
         {
           label: 'Text answers',
-          text: 'Typed answers are left out of this average, which uses your spoken answers only. If fewer than half your answers were spoken, Communication shows N/A and the overall score uses Technical only.',
+          text: 'Typed answers are left out of this average, which uses your spoken answers only. If fewer than half of the questions were answered by voice, Communication shows N/A and the overall score uses Technical only.',
         },
       ],
     },
@@ -63,7 +63,7 @@ function ScoringModal({ onClose }) {
         },
         {
           label: 'Text answers',
-          text: 'Same as Communication: typed answers are left out of the average. If fewer than half your answers were spoken, Pacing shows N/A.',
+          text: 'Same as Communication: typed answers are left out of the average. If fewer than half of the questions were answered by voice, Pacing shows N/A.',
         },
       ],
     },
@@ -72,11 +72,11 @@ function ScoringModal({ onClose }) {
       color: '#6b6860',
       items: [
         {
-          label: 'Voice session (half or more answers spoken)',
+          label: 'Voice session (half or more of the questions answered by voice)',
           text: 'Technical 60% + Communication 25% + Pacing 15%.',
         },
         {
-          label: 'Fewer than half the answers spoken',
+          label: 'Fewer than half the questions answered by voice',
           text: 'Technical 100%. Communication and Pacing show N/A.',
         },
         {
@@ -252,6 +252,7 @@ export default function ReportScreen() {
 
   const endedEarly = turns && sessionConfig &&
     turns.filter(t => !t.skipped).length + (turns.filter(t => t.skipped).length) < sessionConfig.questionCount
+  const answeredCount = turns ? turns.filter(t => !t.skipped).length : 0
 
   return (
     <div style={{ width: '100%', overflowY: 'auto', flex: 1, backgroundColor: '#f8f7f4' }}>
@@ -327,8 +328,11 @@ export default function ReportScreen() {
                 Session ended early
               </p>
               <p className="text-xs" style={{ color: '#6b6860' }}>
-                {turns.length} of {sessionConfig.questionCount} questions answered.
-                Unanswered questions are counted as 0 — scores reflect the full session length.
+                {answeredCount} of {sessionConfig.questionCount} questions answered.
+                Unanswered questions count as 0 in the Technical score, so Technical and Overall
+                reflect the full session length. Communication and Pacing are scored only if at
+                least {Math.ceil(sessionConfig.questionCount / 2)} of the {sessionConfig.questionCount} questions
+                were answered by voice.
               </p>
             </div>
           </div>
