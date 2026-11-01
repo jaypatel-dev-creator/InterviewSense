@@ -280,7 +280,7 @@ backend/
 │   ├── models.py             # SQLAlchemy ORM models (Session, Turn, Report)
 │   └── queries.py            # ORM query functions
 ├── domains/
-│   └── topics.py             # 24–30 seed topics × 5 domains
+│   └── topics.py             # 24–30 seed topics × 5 domains, filtered by difficulty
 ├── prompts/
 │   ├── evaluator_router.py   # Evaluator-Router + first question prompt builders
 │   ├── jd_extractor.py       # JD skill extraction prompt

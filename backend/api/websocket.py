@@ -187,10 +187,14 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
                             await finalize_session(websocket, state, session_id, graph)
                             return  
 
+                        # Rotate the focus skill so replacements don't all target jd_skills[0].
+                        # current_question_number was already incremented above.
+                        skills = state["jd_skills"]
+                        focus = [skills[(state["current_question_number"] - 1) % len(skills)]] if skills else []
                         next_question = await generate_first_question(
                             domain=state["domain"],
                             difficulty=state["difficulty"],
-                            jd_skills=state["jd_skills"],
+                            jd_skills=focus,
                         )
                         state["current_question"] = next_question
                         await websocket.send_json({

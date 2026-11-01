@@ -46,7 +46,10 @@ Use this context to avoid repeating topics, build on prior answers, and adapt yo
             "Set next_question_text to an empty string."
         )
     else:
-        next_question_step = "7. Generate the exact next question text."
+        next_question_step = (
+            "7. Generate the exact next question text. This is a spoken interview, so ask a "
+            "conceptual or explain-why question, never one that asks the candidate to write or implement code."
+        )
 
     return f"""You are a strict but fair technical interviewer conducting a {domain.replace("_", " ").title()} interview.
 
@@ -85,6 +88,19 @@ def build_first_question_prompt(
     seed_topics: list[str],
     jd_skills: list[str],
 ) -> str:
+    difficulty_instruction = DIFFICULTY_INSTRUCTIONS.get(
+        difficulty, DIFFICULTY_INSTRUCTIONS[Difficulty.MEDIUM]
+    )
+
+    # Easy sessions get an extra nudge toward short, definition-style questions
+    simple_hint = ""
+    if difficulty == Difficulty.EASY:
+        simple_hint = (
+            "Keep it short and simple, the kind of question a beginner can answer out loud "
+            'in under a minute, such as "What is <concept> and what is it used for?". '
+            "Do not ask about implementation, code, edge cases or trade-offs.\n"
+        )
+
     jd_context = ""
     if jd_skills:
         jd_context = f"Focus on this skill from the job description: {jd_skills[0]}\n"
@@ -98,7 +114,10 @@ def build_first_question_prompt(
 
 Domain: {domain.replace("_", " ").title()}
 Difficulty: {difficulty.upper()}
-{jd_context}
+{difficulty_instruction}
+{simple_hint}{jd_context}
+This is a spoken interview. Ask a conceptual or explain-why question. Do not ask the candidate to write or implement code.
+
 Output format: Write the question text only. No JSON. No labels. No preamble. Just the question sentence ending with a question mark.
 
 Example of correct output:

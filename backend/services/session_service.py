@@ -10,7 +10,7 @@ from db.database import get_db
 from db.queries import insert_report, update_session_end
 from prompts.evaluator_router import build_first_question_prompt
 from prompts.jd_extractor import build_jd_extractor_prompt
-from domains.topics import SEED_TOPICS
+from domains.topics import get_seed_topics
 from core.logging import get_logger
 from core.exceptions import AgentException
 
@@ -85,7 +85,7 @@ async def generate_first_question(
     jd_skills: list[str],
 ) -> str:
     llm = get_llm()
-    seed_topics = SEED_TOPICS.get(domain, [])
+    seed_topics = get_seed_topics(domain, difficulty)
     prompt = build_first_question_prompt(
         domain=domain,
         difficulty=difficulty,
