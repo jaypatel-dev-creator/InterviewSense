@@ -36,8 +36,8 @@ async def init_db() -> None:
 
     _engine = create_async_engine(
         f"sqlite+aiosqlite:///{db_path}",
-        echo=False,           # set True temporarily to debug SQL queries
-        future=True,
+        echo=False,  #dont print sql queries in terminal        
+        future=True, # use SQLAlchemy 2.0 modern API style
     )
 
     # SQLite ignores foreign keys unless this pragma is set on every connection.

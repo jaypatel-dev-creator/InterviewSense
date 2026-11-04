@@ -21,6 +21,7 @@ from core.config import get_settings
 from core.logging import get_logger
 from services.elevenlabs import get_elevenlabs_client
 
+
 logger = get_logger(__name__)
 
 router = APIRouter()
@@ -119,7 +120,7 @@ async def text_to_speech(payload: TTSRequest):
     client = get_elevenlabs_client()
 
     try:
-        audio_bytes = b""
+        audio_bytes = b"" #empty byte object (not string cause this stores audio, which is byte not string )
         async for chunk in client.text_to_speech.convert(
             text=payload.text,
             voice_id=settings.elevenlabs_voice_id,

@@ -76,7 +76,6 @@ YOUR TASK:
    - "reframe" — candidate completely misunderstood, approach the concept differently
    - "new_topic" — candidate answered well enough, move to a new topic
 {next_question_step}
-8. Decide difficulty adjustment for the next question.
 
 Respond ONLY with the structured JSON output. No preamble, no explanation outside the JSON.
 """
@@ -101,21 +100,22 @@ def build_first_question_prompt(
             "Do not ask about implementation, code, edge cases or trade-offs.\n"
         )
 
-    jd_context = ""
+    # Pick one topic in code — don't let the LLM choose.
+    # With a JD, the topic is the JD skill, so the prompt carries a single instruction.
+    # Without a JD, it is a random seed topic.
     if jd_skills:
-        jd_context = f"Focus on this skill from the job description: {jd_skills[0]}\n"
-
-    # Pick one topic in code — don't let the LLM choose
-    topics_pool = seed_topics.copy()
-    random.shuffle(topics_pool)
-    chosen_topic = topics_pool[0]
+        chosen_topic = jd_skills[0]
+    else:
+        topics_pool = seed_topics.copy()
+        random.shuffle(topics_pool)
+        chosen_topic = topics_pool[0]
 
     return f"""You are a technical interviewer. Ask one interview question about: {chosen_topic}
 
 Domain: {domain.replace("_", " ").title()}
 Difficulty: {difficulty.upper()}
 {difficulty_instruction}
-{simple_hint}{jd_context}
+{simple_hint}
 This is a spoken interview. Ask a conceptual or explain-why question. Do not ask the candidate to write or implement code.
 
 Output format: Write the question text only. No JSON. No labels. No preamble. Just the question sentence ending with a question mark.

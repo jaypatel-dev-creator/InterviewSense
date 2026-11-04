@@ -97,7 +97,7 @@ Audio is captured as `Float32Array` frames via the Web Audio API and buffered in
 | Backend Engineering | REST, auth, databases, concurrency, deployment, rate limiting |
 | DSA | Arrays, trees, graphs, dynamic programming, sliding window, monotonic stack |
 
-Each domain has 24–30 seed topics. The first question is drawn from the seed pool, filtered by difficulty: Easy leaves out advanced topics, Hard leaves out introductory ones, and Medium uses the full pool. With a JD, a separate extraction call pulls out role-specific skills, the evaluator-router biases questioning toward them, and the skills targeted by answered questions are tracked post-session.
+Each domain has 24–30 seed topics. Without a JD, the first question is drawn from the seed pool, filtered by difficulty: Easy leaves out advanced topics, Hard leaves out introductory ones, and Medium uses the full pool. With a JD, a separate extraction call pulls out role-specific skills and the first question is built around the first extracted skill. The seed-topic filter is not applied in that case, and the difficulty level still controls how the question is phrased. The evaluator-router then biases later questioning toward the extracted skills, and the skills targeted by answered questions are tracked post-session.
 
 ---
 
@@ -166,7 +166,7 @@ Technical correctness is scored by a single Gemini call per answer with no refer
 The technical score is averaged over the configured `question_count`, so ending an interview early counts the unreached questions as zeros.
 
 **14. Skipped questions are replaced without context**
-A skipped question is replaced by a new one generated from the seed topics with no knowledge of the questions already asked, so it can repeat a topic that was already covered.
+A skipped question is replaced by a new one with no knowledge of the questions already asked, so it can repeat a topic that was already covered. Without a JD, the replacement is generated from the seed topics. With a JD, it is built around one JD skill, rotated by question number.
 
 **15. Answer processing blocks the WebSocket loop**
 Transcription and evaluation (roughly 4–8 seconds of Groq and Gemini calls) are awaited inside the WebSocket receive loop. Control messages such as `end_interview`, `skip_question` and `repeat_question` sent during that time are handled only after processing finishes.

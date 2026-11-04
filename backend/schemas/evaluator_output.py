@@ -25,7 +25,7 @@ class EvaluatorRouterOutput(BaseModel):
         )
     )
 
-    
+    #Router 
     next_question_type: Literal[
         "new_topic",
         "follow_up",
@@ -36,7 +36,4 @@ class EvaluatorRouterOutput(BaseModel):
     )
     next_question_text: str = Field(
         description="The exact next question to ask the candidate. Empty string if the current question was the final one."
-    )
-    difficulty_adjustment: Literal["increase", "maintain", "decrease"] = Field(
-        description="Whether to adjust difficulty for the next question"
     )
