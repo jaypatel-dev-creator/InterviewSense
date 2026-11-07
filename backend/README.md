@@ -248,7 +248,7 @@ SQLAlchemy async ORM with `Base.metadata.create_all` at startup. Tables are crea
 | `GET` | `/api/sessions/{id}/report` | Get report for a session | No |
 | `GET` | `/api/health` | Health check | No (for monitoring) |
 
-These endpoints are not used by the current frontend. The UI receives the live report and turns directly over the WebSocket in the `report_ready` message. I still implemented the session, turns and report endpoints so the REST API covers the full behaviour for stored data, and so past sessions can be retrieved later, for example from the history screen. The health endpoint is intended for monitoring, since load balancers and hosting platforms ping it to check whether the service is up.
+These endpoints are not used by the current frontend. The UI receives the live report and turns directly over the WebSocket in the `report_ready` message. The history screen currently only lists and deletes sessions. I implemented the session, turns and report endpoints so the REST API covers the full behaviour for stored data, and so past reports can be opened later, but I haven't built that UI yet. The health endpoint is intended for monitoring, since load balancers and hosting platforms ping it to check whether the service is up.
 ---
 
 ## Startup Sequence

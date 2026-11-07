@@ -27,7 +27,7 @@ def compile_graph() -> None:
     set_llm(llm)
 
     graph = StateGraph(SessionState)
-
+  #registering nodes 
     graph.add_node("speech_analytics", speech_analytics_node)
     graph.add_node("evaluator_router", evaluator_router_node)
     graph.add_node("report_generator", report_generator_node)

@@ -7,7 +7,7 @@ from core.logging import get_logger
 from core.exceptions import TranscriptionException
 
 logger = get_logger(__name__)
-
+#constants 
 GROQ_MODEL = "whisper-large-v3-turbo"
 
 WHISPER_PROMPT = "Umm, let me think like, hmm... Okay, so, uh, here's what I'm, you know, thinking."
@@ -16,6 +16,8 @@ WHISPER_PROMPT = "Umm, let me think like, hmm... Okay, so, uh, here's what I'm, 
 _groq_client: AsyncGroq | None = None
 
 
+# NOTE: load_whisper is a leftover from when this project used a local Whisper model.
+# It now only initializes the Groq API client. Could be renamed to init_groq_client().
 def load_whisper() -> None:
     global _groq_client
     settings = get_settings()
@@ -66,14 +68,14 @@ async def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
                     "word": w["word"].strip(),
                     "start": w["start"],
                     "end": w["end"],
-                    "probability": 1.0,
+                    
                 })
             else:
                 words.append({
                     "word": w.word.strip(),
                     "start": w.start,
                     "end": w.end,
-                    "probability": 1.0,
+                   
                 })
 
     language = response.language if hasattr(response, "language") else "en"

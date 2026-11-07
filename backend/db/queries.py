@@ -9,6 +9,7 @@ logger = get_logger(__name__)
 
 # --- Sessions ---
 
+# Called from: routes.py
 async def insert_session(db: AsyncSession, session: dict) -> None:
     db.add(Session(
         session_id=session["session_id"],
@@ -23,6 +24,7 @@ async def insert_session(db: AsyncSession, session: dict) -> None:
     logger.debug(f"Session inserted: {session['session_id']}")
 
 
+# Called from: session_service.py
 async def update_session_end(
     db: AsyncSession,
     session_id: str,
@@ -36,6 +38,7 @@ async def update_session_end(
     )
 
 
+# Called from: routes.py
 async def get_all_sessions(db: AsyncSession) -> list[dict]:
     result = await db.execute(
         select(Session).order_by(Session.start_time.desc())
@@ -44,6 +47,7 @@ async def get_all_sessions(db: AsyncSession) -> list[dict]:
     return [_session_to_dict(s) for s in sessions]
 
 
+# Called from: routes.py, websocket.py
 async def get_session_by_id(
     db: AsyncSession, session_id: str
 ) -> dict | None:
@@ -56,6 +60,7 @@ async def get_session_by_id(
     return _session_to_dict(session)
 
 
+# Called from: routes.py
 async def delete_session(db: AsyncSession, session_id: str) -> bool:
     await db.execute(delete(Turn).where(Turn.session_id == session_id))
     await db.execute(delete(Report).where(Report.session_id == session_id))
@@ -68,6 +73,7 @@ async def delete_session(db: AsyncSession, session_id: str) -> bool:
     return deleted
 
 
+# Called from: routes.py
 async def delete_all_sessions(db: AsyncSession) -> int:
     # Get count before deletion
     count_result = await db.execute(select(func.count()).select_from(Session))
@@ -85,6 +91,7 @@ async def delete_all_sessions(db: AsyncSession) -> int:
 
 # --- Turns ---
 
+# Called from: websocket.py
 async def insert_turn(db: AsyncSession, turn: dict) -> None:
     db.add(Turn(
         turn_id=turn["turn_id"],
@@ -105,6 +112,8 @@ async def insert_turn(db: AsyncSession, turn: dict) -> None:
     logger.debug(f"Turn inserted: {turn['turn_id']}")
 
 
+# Called from: routes.py (get_turns route only).
+# That route is not used by the frontend, so this function is indirectly not used by the current UI.
 async def get_turns_by_session(
     db: AsyncSession, session_id: str
 ) -> list[dict]:
@@ -119,6 +128,7 @@ async def get_turns_by_session(
 
 # --- Reports ---
 
+# Called from: session_service.py
 async def insert_report(db: AsyncSession, report: dict) -> None:
     existing = await db.execute(
         select(Report).where(Report.session_id == report["session_id"])
@@ -144,6 +154,8 @@ async def insert_report(db: AsyncSession, report: dict) -> None:
     logger.debug(f"Report inserted: {report['report_id']}")
 
 
+# Called from: routes.py (get_report route only).
+# That route is not used by the frontend, so this function is indirectly not used by the current UI.
 async def get_report_by_session(
     db: AsyncSession, session_id: str
 ) -> dict | None:
@@ -157,6 +169,7 @@ async def get_report_by_session(
 
 
 
+# Called from: this file (get_all_sessions, get_session_by_id)
 def _session_to_dict(s: Session) -> dict:
     return {
         "session_id": s.session_id,
@@ -171,6 +184,7 @@ def _session_to_dict(s: Session) -> dict:
     }
 
 
+# Called from: this file (get_turns_by_session)
 def _turn_to_dict(t: Turn) -> dict:
     return {
         "turn_id": t.turn_id,
@@ -189,6 +203,7 @@ def _turn_to_dict(t: Turn) -> dict:
     }
 
 
+# Called from: this file (get_report_by_session)
 def _report_to_dict(r: Report) -> dict:
     return {
         "report_id": r.report_id,

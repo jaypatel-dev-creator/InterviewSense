@@ -10,8 +10,8 @@ def build_report_prompt(
 ) -> str:
     name = candidate_name or "the candidate"
 
-    # avg_speech_score is None when fewer than half the answers were spoken — do not
-    # show the LLM a fake number to quote.
+    # avg_speech_score is None when fewer than half the answers were spoken — do not show LLM a fake number to quote 
+    
     if avg_speech_score is None:
         speech_line = "- Average Speech Score: not available (fewer than half the answers were spoken)"
         communication_instruction = (

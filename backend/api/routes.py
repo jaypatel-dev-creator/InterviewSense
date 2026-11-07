@@ -58,6 +58,8 @@ async def list_sessions():
     return [SessionResponse(**s) for s in sessions]
 
 
+# NOT USED by the current frontend: services/api.js defines getSession() but nothing calls it.
+# Kept so the REST API covers the full behaviour for stored sessions.
 @router.get("/sessions/{session_id}", response_model=SessionResponse)
 async def get_session(session_id: str):
     async with get_db() as db:
@@ -83,6 +85,9 @@ async def remove_session(session_id: str):
 
 # --- Turns ---
 
+# NOT USED by the current frontend: services/api.js defines getSessionTurns() but nothing calls it.
+# The live turns reach the UI over the WebSocket in the report_ready message.
+# TurnResponse and SpeechMetrics are used only by this route.
 @router.get("/sessions/{session_id}/turns", response_model=list[TurnResponse])
 async def get_turns(session_id: str):
     async with get_db() as db:
@@ -100,6 +105,9 @@ async def get_turns(session_id: str):
 
 # --- Reports ---
 
+# NOT USED by the current frontend: services/api.js defines getSessionReport() but nothing calls it.
+# The live report reaches the UI over the WebSocket in the report_ready message.
+# ReportResponse is used only by this route.
 @router.get("/sessions/{session_id}/report", response_model=ReportResponse)
 async def get_report(session_id: str):
     async with get_db() as db:
@@ -141,6 +149,8 @@ async def text_to_speech(payload: TTSRequest):
 
 # --- Health ---
 
+# NOT USED by the current frontend: services/api.js defines healthCheck() but nothing calls it.
+# Intended for monitoring: load balancers and hosting platforms ping it to check the service is up.
 @router.get("/health")
 async def health():
     return {"status": "ok", "service": "InterviewSense"}

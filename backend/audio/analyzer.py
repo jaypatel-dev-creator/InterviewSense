@@ -11,6 +11,7 @@ FILLER_WORDS = {
 }
 
 
+#extracting speech metrics 
 def extract_speech_features(
     words: list[dict] | None = None,
     duration: float = 0.0,
@@ -32,6 +33,7 @@ def extract_speech_features(
     return metrics
 
 
+#helper functions 
 def _compute_speaking_duration(words: list[dict], clip_duration: float) -> float:
     span = words[-1]["end"] - words[0]["start"]
     return span if span >= 1.0 else clip_duration

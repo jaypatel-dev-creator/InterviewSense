@@ -34,7 +34,7 @@ class SessionState(TypedDict):
     # Interview progress
     current_question: str
     current_question_number: int
-    turns: Annotated[list[Turn], _replace_turns]
+    turns: Annotated[list[Turn], _replace_turns] #reducer 
 
     interview_complete: bool
     conversation_summary: str

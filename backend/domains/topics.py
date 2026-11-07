@@ -231,7 +231,7 @@ NOT_FOR_HARD: set[str] = {
 def get_seed_topics(domain: str, difficulty: str) -> list[str]:
     """Seed topics for a domain, filtered by difficulty.
 
-    Medium uses the full pool. If filtering would leave nothing, the full pool is used.
+    Medium uses the full pool or If filtering would leave nothing, the full pool is used.
     """
     topics = SEED_TOPICS.get(domain, [])
     if difficulty == Difficulty.EASY:
