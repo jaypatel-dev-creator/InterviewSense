@@ -14,6 +14,7 @@ logger = get_logger(__name__)
 _graph = None
 
 
+# Called from: main.py (startup)
 def compile_graph() -> None:
     global _graph
 
@@ -50,12 +51,14 @@ def compile_graph() -> None:
     logger.info("InterviewSense agent graph compiled.")
 
 
+# Called from: websocket.py (when the WebSocket connects)
 def get_graph():
     if _graph is None:
         raise AgentException("Graph not initialized. Call compile_graph() on startup.")
     return _graph
 
 
+# Called from: this file (conditional edge in compile_graph)
 def should_generate_report(state: SessionState) -> str:
     if state.get("interview_complete", False):
         return "report_generator"

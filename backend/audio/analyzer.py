@@ -12,6 +12,7 @@ FILLER_WORDS = {
 
 
 #extracting speech metrics 
+# Called from: processor.py (process_audio_chunk)
 def extract_speech_features(
     words: list[dict] | None = None,
     duration: float = 0.0,
@@ -34,11 +35,13 @@ def extract_speech_features(
 
 
 #helper functions 
+# Called from: this file (extract_speech_features)
 def _compute_speaking_duration(words: list[dict], clip_duration: float) -> float:
     span = words[-1]["end"] - words[0]["start"]
     return span if span >= 1.0 else clip_duration
 
 
+# Called from: this file (extract_speech_features)
 def _compute_wpm(words: list[dict], duration: float) -> float:
     if not words or duration <= 0:
         return 0.0
@@ -46,6 +49,7 @@ def _compute_wpm(words: list[dict], duration: float) -> float:
     return len(words) / minutes if minutes > 0 else 0.0
 
 
+# Called from: this file (extract_speech_features)
 def _compute_pause_count(words: list[dict], pause_threshold: float = 1.5) -> int:
     if len(words) < 2:
         return 0
@@ -57,6 +61,7 @@ def _compute_pause_count(words: list[dict], pause_threshold: float = 1.5) -> int
     return count
 
 
+# Called from: this file (extract_speech_features)
 def _compute_filler_count(words: list[dict]) -> int:
     count = 0
     word_list = [w["word"].lower().strip(".,!?") for w in words]

@@ -19,12 +19,14 @@ _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
+# Called from: this file (get_db)
 def _get_session_factory() -> async_sessionmaker[AsyncSession]:
     if _session_factory is None:
         raise RuntimeError("Database not initialized. Call init_db() on startup.")
     return _session_factory
 
 
+# Called from: main.py (startup)
 async def init_db() -> None:
     global _engine, _session_factory
 
@@ -60,6 +62,7 @@ async def init_db() -> None:
     logger.info(f"Database initialized — path: {db_path}")
 
 
+# Called from: routes.py, session_service.py, websocket.py
 @asynccontextmanager
 async def get_db():
     factory = _get_session_factory()

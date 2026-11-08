@@ -7,6 +7,7 @@ logger = get_logger(__name__)
 _elevenlabs_client: AsyncElevenLabs | None = None
 
 
+# Called from: main.py (startup)
 def load_elevenlabs() -> None:
     global _elevenlabs_client
     settings = get_settings()
@@ -14,6 +15,7 @@ def load_elevenlabs() -> None:
     logger.info("ElevenLabs client initialized.")
 
 
+# Called from: routes.py (the /tts route)
 def get_elevenlabs_client() -> AsyncElevenLabs:
     if _elevenlabs_client is None:
         raise RuntimeError(

@@ -18,6 +18,7 @@ _groq_client: AsyncGroq | None = None
 
 # NOTE: load_whisper is a leftover from when this project used a local Whisper model.
 # It now only initializes the Groq API client. Could be renamed to init_groq_client().
+# Called from: main.py (startup)
 def load_whisper() -> None:
     global _groq_client
     settings = get_settings()
@@ -25,12 +26,14 @@ def load_whisper() -> None:
     logger.info(f"Groq STT client initialized — model: {GROQ_MODEL}")
 
 
+# Called from: this file (transcribe)
 def get_groq_client() -> AsyncGroq:
     if _groq_client is None:
         raise RuntimeError("Groq client not initialized. Call load_whisper() on startup.")
     return _groq_client
 
 
+# Called from: this file (transcribe)
 def _numpy_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
     buffer = io.BytesIO()
     audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
@@ -39,6 +42,7 @@ def _numpy_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
     return buffer.read()
 
 
+# Called from: processor.py (process_audio_chunk)
 async def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
     client = get_groq_client()
 

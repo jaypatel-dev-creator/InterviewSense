@@ -13,6 +13,7 @@ INCREASE_AT_SCORE = 8.0
 DECREASE_AT_SCORE = 4.0
 
 
+# Called from: this file (evaluator_router_node)
 def _difficulty_adjustment_from_score(score: float) -> str:
     if score >= INCREASE_AT_SCORE:
         return "increase"
@@ -21,6 +22,7 @@ def _difficulty_adjustment_from_score(score: float) -> str:
     return "maintain"
 
 
+# Called from: this file (evaluator_router_node)
 def _adjust_difficulty(current: str, adjustment: str) -> str:
     if current not in DIFFICULTY_LEVELS:
         return current
@@ -32,6 +34,7 @@ def _adjust_difficulty(current: str, adjustment: str) -> str:
     return DIFFICULTY_LEVELS[index]
 
 
+# Called from: this file (evaluator_router_node)
 def _match_jd_skill(skill: str | None, jd_skills: list[str]) -> str | None:
     if not skill:
         return None
@@ -42,6 +45,7 @@ def _match_jd_skill(skill: str | None, jd_skills: list[str]) -> str | None:
     return None
 
 
+# Called from: orchestrator.py (graph node, registered in compile_graph)
 async def evaluator_router_node(state: SessionState) -> dict:
     logger.debug("Evaluator-router node executing.")
 

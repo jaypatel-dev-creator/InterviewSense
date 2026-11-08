@@ -6,6 +6,7 @@ from audio.analyzer import extract_speech_features
 logger = get_logger(__name__)
 
 
+# Called from: websocket.py (for each voice answer)
 async def process_audio_chunk(
     audio_chunk: np.ndarray,
     sample_rate: int = 16000,

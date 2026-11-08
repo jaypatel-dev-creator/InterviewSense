@@ -5,6 +5,7 @@ from core.exceptions import AgentException
 logger = get_logger(__name__)
 
 
+# Called from: orchestrator.py (registered as the graph's entry node in compile_graph)
 async def speech_analytics_node(state: SessionState) -> dict:
     logger.debug("Speech analytics node executing.")
 

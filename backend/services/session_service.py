@@ -21,10 +21,13 @@ MAX_JD_SKILLS = 12
 MAX_SKILL_CHARS = 80
 
 
+# Called from: session_service.py (finalize_session), websocket.py
+# routes.py has its own copy of this helper.
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Called from: this file (extract_jd_skills, generate_first_question)
 def _extract_text(response) -> str:
     content = response.content
     if isinstance(content, list):
@@ -38,6 +41,7 @@ def _extract_text(response) -> str:
     return str(content).strip()
 
 
+# Called from: this file (extract_jd_skills)
 def _clean_skills(skills: list) -> list[str]:
     """
     Keeps only usable skills from the model's output: non-empty strings of reasonable
@@ -60,6 +64,7 @@ def _clean_skills(skills: list) -> list[str]:
     return cleaned
 
 
+# Called from: websocket.py (when the WebSocket connects)
 async def extract_jd_skills(jd_text: str) -> list[str]:
     if not jd_text or not jd_text.strip():
         return []
@@ -79,6 +84,7 @@ async def extract_jd_skills(jd_text: str) -> list[str]:
         return []
 
 
+# Called from: websocket.py (at the start of the interview, and when a question is skipped)
 async def generate_first_question(
     domain: str,
     difficulty: str,
@@ -103,6 +109,7 @@ async def generate_first_question(
         return f"Tell me about your experience with {domain.replace('_', ' ')}."
 
 
+# Called from: websocket.py (after each evaluated answer)
 def build_conversation_summary_line(state: SessionState, evaluated_turn: dict) -> str:
     score_str = (
         f"{evaluated_turn.get('correctness_score', 0):.1f}"
@@ -117,6 +124,7 @@ def build_conversation_summary_line(state: SessionState, evaluated_turn: dict) -
     )
 
 
+# Called from: this file (finalize_session)
 def _compute_pacing_score(wpm: float) -> float:
     if wpm <= 0:
         return 0.0
@@ -129,6 +137,7 @@ def _compute_pacing_score(wpm: float) -> float:
     return round(max(2.0, min(10.0, score)), 2)
 
 
+# Called from: this file (finalize_session)
 def _compute_communication_score(speech_metrics: dict) -> float:
     filler_count = speech_metrics.get("filler_word_count", 0)
     pause_count = speech_metrics.get("pause_count", 0)
@@ -149,6 +158,7 @@ def _compute_communication_score(speech_metrics: dict) -> float:
     return round(min(10.0, weighted), 2)
 
 
+# Called from: this file (finalize_session)
 def _rank_weak_topics(turns: list) -> list[str]:
     """
     Unique missing concepts across all turns, most frequent first.
@@ -167,6 +177,7 @@ def _rank_weak_topics(turns: list) -> list[str]:
     return [labels[key] for key in sorted(counts, key=lambda k: -counts[k])]
 
 
+# Called from: websocket.py (end_interview message, skipping the last question, answering the last question)
 async def finalize_session(
     websocket: WebSocket,
     state: SessionState,

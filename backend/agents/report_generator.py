@@ -7,6 +7,7 @@ from core.exceptions import AgentException
 logger = get_logger(__name__)
 
 
+# Called from: orchestrator.py (graph node, registered in compile_graph)
 async def report_generator_node(state: SessionState) -> dict:
    
     logger.debug("Report generator node executing.")
