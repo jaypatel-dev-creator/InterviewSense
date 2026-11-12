@@ -7,6 +7,10 @@ logger = get_logger(__name__)
 
 # Called from: orchestrator.py (registered as the graph's entry node in compile_graph)
 async def speech_analytics_node(state: SessionState) -> dict:
+     # NOTE: Named "speech analytics" because this node logs the speech metrics of the
+    # latest turn. Despite the name, it does not compute them: the metrics are computed
+    # earlier in audio/analyzer.py, when the audio arrives. This node also validates the
+    # latest turn before the evaluator runs.
     logger.debug("Speech analytics node executing.")
 
     turns = state.get("turns", [])

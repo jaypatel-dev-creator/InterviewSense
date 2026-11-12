@@ -34,6 +34,7 @@ def _adjust_difficulty(current: str, adjustment: str) -> str:
     return DIFFICULTY_LEVELS[index]
 
 
+
 # Called from: this file (evaluator_router_node)
 def _match_jd_skill(skill: str | None, jd_skills: list[str]) -> str | None:
     if not skill:
@@ -91,7 +92,7 @@ async def evaluator_router_node(state: SessionState) -> dict:
         "next_question_type": result.next_question_type,
         "difficulty_adjustment": difficulty_adjustment,
         "jd_skill_targeted": _match_jd_skill(result.jd_skill_targeted, state.get("jd_skills", [])),
-    }
+    }w
 
     updated_turns = turns[:-1] + [updated_turn]
 

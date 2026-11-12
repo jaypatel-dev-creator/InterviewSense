@@ -61,8 +61,9 @@ async def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
         logger.error(f"Groq transcription failed: {e}")
         raise TranscriptionException(f"Groq STT failed: {str(e)}")
 
+#extracting transcripts (from response.text)
     full_text = response.text.strip() if response.text else ""
-
+#extracting words (from response.words)
     words = []
     if hasattr(response, "words") and response.words:
         for w in response.words:
@@ -81,7 +82,7 @@ async def transcribe(audio_chunk: np.ndarray, sample_rate: int = 16000) -> dict:
                     "end": w.end,
                    
                 })
-
+ #extracting language from response.language
     language = response.language if hasattr(response, "language") else "en"
 
     logger.debug(f"Transcribed {len(words)} words via Groq — language: {language}")

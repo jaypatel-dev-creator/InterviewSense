@@ -149,10 +149,12 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
                             session_id=session_id,
                         )
                         if state.get("interview_complete"):
+                            await websocket.close(code=1000)
                             return
 
                     elif data.get("type") == "end_interview":
                         await finalize_session(websocket, state, session_id, graph)
+                        await websocket.close(code=1000)
                         return
 
                     elif data.get("type") == "repeat_question":
@@ -185,6 +187,7 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
                         state["current_question_number"] += 1
                         if state["current_question_number"] > question_count:
                             await finalize_session(websocket, state, session_id, graph)
+                            await websocket.close(code=1000)
                             return  
 
                         # Rotate the focus skill so replacements don't all target jd_skills[0].
@@ -241,6 +244,7 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
                             session_id=session_id,
                         )
                         if state.get("interview_complete"):
+                            await websocket.close(code=1000)
                             return
 
             except TranscriptionException as e:

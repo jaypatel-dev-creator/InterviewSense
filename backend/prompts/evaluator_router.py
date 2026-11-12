@@ -101,12 +101,12 @@ def build_first_question_prompt(
         )
 
     # Pick one topic in code — don't let the LLM choose.
-    # With a JD, the topic is the JD skill, so the prompt carries a single instruction.
+    # With a JD, the topic is the JD skill 
     # Without a JD, it is a random seed topic.
     if jd_skills:
         chosen_topic = jd_skills[0]
     else:
-        topics_pool = seed_topics.copy()
+        topics_pool = seed_topics.copy() #creating copy of seed_topics so that we dont shuffle that original 
         random.shuffle(topics_pool)
         chosen_topic = topics_pool[0]
 
