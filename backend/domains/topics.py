@@ -234,12 +234,12 @@ def get_seed_topics(domain: str, difficulty: str) -> list[str]:
     Medium uses the full pool or If filtering would leave nothing, the full pool is used.
     """
     topics = SEED_TOPICS.get(domain, [])
-    if difficulty == Difficulty.EASY:
+    if difficulty == Difficulty.EASY:  #for easy level 
         excluded = NOT_FOR_EASY
-    elif difficulty == Difficulty.HARD:
+    elif difficulty == Difficulty.HARD: #for hard level 
         excluded = NOT_FOR_HARD
     else:
-        return topics
+        return topics #for medium , all topics from pool will be selected.
     return [t for t in topics if t not in excluded] or topics
 
 

@@ -1,17 +1,41 @@
 import random
 from domains.topics import Difficulty, DIFFICULTY_INSTRUCTIONS
 
+HISTORY_QUESTION_CHARS = 80
+HISTORY_ANSWER_CHARS = 200
+
+
+def build_history_block(previous_turns: list[dict]) -> str:
+    """
+    One line per earlier turn, built from the turns list at prompt time:
+    question, score, missing concepts and the opening of the answer.
+    Skipped questions are marked SKIPPED so they are not asked again.
+    """
+    lines = []
+    for number, turn in enumerate(previous_turns, start=1):
+        question = (turn.get("question_text") or "")[:HISTORY_QUESTION_CHARS]
+        if turn.get("skipped"):
+            lines.append(f"Q{number}: {question} | SKIPPED")
+            continue
+        score = turn.get("correctness_score")
+        score_str = f"{score:.1f}" if score is not None else "N/A"
+        missing = ", ".join(turn.get("missing_concepts") or []) or "none"
+        answer = (turn.get("answer_transcript") or "")[:HISTORY_ANSWER_CHARS]
+        lines.append(
+            f"Q{number}: {question} | Score: {score_str}/10 | Missing: {missing} | A: {answer}"
+        )
+    return "\n".join(lines)
+
 
 def build_evaluator_router_prompt(
     domain: str,
     difficulty: str,
     question_text: str,
     answer_transcript: str,
-    topics_covered: list[str],
     current_question_number: int,
     question_count: int,
     jd_skills: list[str],
-    conversation_summary: str = "",
+    previous_turns: list[dict],
 ) -> str:
     difficulty_instruction = DIFFICULTY_INSTRUCTIONS.get(
         difficulty, DIFFICULTY_INSTRUCTIONS[Difficulty.MEDIUM]
@@ -29,14 +53,13 @@ If the current question does not map to any JD skill, set jd_skill_targeted to n
     else:
         jd_context = "\nNo JD provided — set jd_skill_targeted to null.\n"
 
-    topics_str = ", ".join(topics_covered) if topics_covered else "none yet"
-
     history_section = ""
-    if conversation_summary.strip():
+    history = build_history_block(previous_turns)
+    if history:
         history_section = f"""
-CONVERSATION HISTORY (previous turns this session):
-{conversation_summary}
-Use this context to avoid repeating topics, build on prior answers, and adapt your follow-up questioning style.
+CONVERSATION HISTORY (previous turns this session, including skipped questions):
+{history}
+Use this context to avoid repeating topics (do not re-ask skipped questions), build on prior answers, and adapt your follow-up questioning style.
 """
 
     # The final question needs no follow-up — don't pay for a next question that is never asked
@@ -62,7 +85,6 @@ CURRENT QUESTION ({current_question_number}/{question_count}):
 CANDIDATE'S ANSWER:
 {answer_transcript}
 
-TOPICS COVERED SO FAR: {topics_str}
 {jd_context}
 YOUR TASK:
 1. Evaluate the candidate's answer objectively against the question asked.

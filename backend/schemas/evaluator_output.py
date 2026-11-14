@@ -3,7 +3,7 @@ from typing import Literal
 
 
 class EvaluatorRouterOutput(BaseModel):
-    # Evaluation
+    # Evaluating existing question 
     correctness_score: float = Field(
         ge=0.0, le=10.0,
         description="Technical correctness score from 0 to 10"
@@ -25,7 +25,7 @@ class EvaluatorRouterOutput(BaseModel):
         )
     )
 
-    #Router 
+    # routing  to next question 
     next_question_type: Literal[
         "new_topic",
         "follow_up",

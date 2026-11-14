@@ -92,11 +92,11 @@ Single Gemini call with structured Pydantic output (`EvaluatorRouterOutput`). In
 - Identifies strengths and missing concepts
 - Identifies which JD skill the current question was testing (`jd_skill_targeted`), matched case-insensitively against the extracted skills and stored as `null` if it matches none
 - Decides the next question type (`drill_down`, `follow_up`, `new_topic`, `reframe`)
-- Generates the exact next question text, informed by a rolling conversation summary (left empty on the final question, where no next question is needed)
+- Generates the exact next question text, informed by the history of earlier turns (left empty on the final question, where no next question is needed)
 
 **Difficulty adaptation.** Difficulty is adjusted in code, not by the model. After each scored answer, a score of 8 or above moves the session up one level (easy → medium → hard), a score of 4 or below moves it down one level, and anything in between keeps it, clamped at both ends. The new level is saved in `SessionState.difficulty` and the applied adjustment is stored on the turn; the model's own `difficulty_adjustment` output is ignored. The change applies from the question after next, because the next question is written in the same call. The history card and report header still show the difficulty the session started with.
 
-The conversation summary is a plain-text log of prior Q&A appended after each turn — no extra LLM call. It gives the evaluator context about how the candidate answered previous questions when generating the next one.
+The conversation history is built from `state["turns"]` each time the prompt is created, with no extra LLM call and no separate field in `SessionState`. Each earlier turn becomes one line: the question (first 80 characters), the score, the missing concepts and the start of the answer (first 200 characters). Skipped questions appear as `SKIPPED`, so the evaluator does not ask them again. The current turn is left out of the history because it is sent in full as the current question and answer.
 
 **`evaluator_router_node` — next question types:**
 

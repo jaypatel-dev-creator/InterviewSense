@@ -53,18 +53,16 @@ async def evaluator_router_node(state: SessionState) -> dict:
     llm = get_llm()
     turns = state.get("turns", [])
     latest_turn = turns[-1]
-    topics_covered = [t.get("question_text", "")[:50] for t in turns[:-1]]
 
     prompt = build_evaluator_router_prompt(
         domain=state["domain"],
         difficulty=state["difficulty"],
         question_text=latest_turn.get("question_text", ""),
         answer_transcript=latest_turn.get("answer_transcript", ""),
-        topics_covered=topics_covered,
+        previous_turns=turns[:-1],
         current_question_number=state["current_question_number"],
         question_count=state["question_count"],
         jd_skills=state.get("jd_skills", []),
-        conversation_summary=state.get("conversation_summary", ""),
     )
 
     structured_llm = llm.with_structured_output(EvaluatorRouterOutput)
@@ -92,7 +90,7 @@ async def evaluator_router_node(state: SessionState) -> dict:
         "next_question_type": result.next_question_type,
         "difficulty_adjustment": difficulty_adjustment,
         "jd_skill_targeted": _match_jd_skill(result.jd_skill_targeted, state.get("jd_skills", [])),
-    }w
+    }
 
     updated_turns = turns[:-1] + [updated_turn]
 

@@ -109,21 +109,6 @@ async def generate_first_question(
         return f"Tell me about your experience with {domain.replace('_', ' ')}."
 
 
-# Called from: websocket.py (after each evaluated answer)
-def build_conversation_summary_line(state: SessionState, evaluated_turn: dict) -> str:
-    score_str = (
-        f"{evaluated_turn.get('correctness_score', 0):.1f}"
-        if evaluated_turn.get("correctness_score") is not None
-        else "N/A"
-    )
-    answer_preview = (evaluated_turn.get("answer_transcript") or "")[:200]
-    return (
-        f"Q{state['current_question_number'] - 1}: "
-        f"{evaluated_turn.get('question_text', '')[:80]} "
-        f"| Score: {score_str}/10 | A: {answer_preview}"
-    )
-
-
 # Called from: this file (finalize_session)
 def _compute_pacing_score(wpm: float) -> float:
     if wpm <= 0:

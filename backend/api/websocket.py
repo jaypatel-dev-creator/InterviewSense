@@ -13,7 +13,6 @@ from services.session_service import (
     utcnow_iso,
     extract_jd_skills,
     generate_first_question,
-    build_conversation_summary_line,
     finalize_session,
 )
 
@@ -88,7 +87,6 @@ async def handle_interview_websocket(websocket: WebSocket, session_id: str):
             "turns": [],
             "interview_complete": False,
             "improvement_plan_text": "",
-            "conversation_summary": "",
         }
 
         await websocket.send_json({
@@ -319,11 +317,6 @@ async def _process_answer(
     logger.info("Agent graph complete.")
 
     evaluated_turn = state["turns"][-1]
-
-    summary_line = build_conversation_summary_line(state, evaluated_turn)
-    state["conversation_summary"] = (
-        state.get("conversation_summary", "") + "\n" + summary_line
-    ).strip()
 
     async with get_db() as db:
         await insert_turn(db, {**evaluated_turn, "session_id": session_id})

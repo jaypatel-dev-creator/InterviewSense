@@ -37,7 +37,6 @@ class SessionState(TypedDict):
     turns: Annotated[list[Turn], _replace_turns] #reducer 
 
     interview_complete: bool
-    conversation_summary: str
     # Report output — populated by report_generator_node
     improvement_plan_text: str
     communication_score: float | None

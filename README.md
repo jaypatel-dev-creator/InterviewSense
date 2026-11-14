@@ -25,7 +25,7 @@ InterviewSense conducts a complete mock technical interview using your microphon
 - **Communication** — fluency score based on filler word rate and long pause frequency, derived from Whisper word timestamps
 - **Pacing** — words-per-minute benchmarked against the 120–160 wpm ideal range
 
-The evaluator adapts each follow-up question based on a rolling conversation summary — it knows how you answered Q1 when generating Q3, not just what topic was covered.
+The evaluator adapts each follow-up question using the history of earlier turns (question, score, missing concepts and the start of each answer, with skipped questions marked). It knows how you answered Q1 when generating Q3, not just what topic was covered.
 
 If a job description is provided, the system extracts role-specific skills, maps each interview question to a targeted JD skill, and reports post-session coverage: which skills were targeted by an answered question and which were not (coverage measures what was asked, not how well it was answered).
 
@@ -50,7 +50,7 @@ FastAPI Backend
         ├── Validation Gate Node      — pure Python, no LLM, validates state before any LLM call
         ├── Evaluator-Router Node     — single Gemini call, structured Pydantic output
         │   (scores answer + generates next question + identifies JD skill targeted)
-        │   (receives rolling conversation summary for context-aware follow-ups)
+        │   (receives the history of earlier turns for context-aware follow-ups)
         └── Report Generator Node     — single Gemini call at session end
             (improvement plan, weak topics, JD coverage, study recommendations)
 ```
